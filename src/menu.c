@@ -1,158 +1,75 @@
+/*******************************************************************************
+ *   Ledger Blue
+ *   (c) 2016 Ledger
+ *   (c) 2020 The TurtleCoin Developers
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ********************************************************************************/
+
 #include "menu.h"
-#include "os.h"
 
-volatile uint8_t dummy_setting_1;
-volatile uint8_t dummy_setting_2;
+static void app_kill(void)
+{
+    BEGIN_TRY_L(exit)
+    {
+        TRY_L(exit)
+        {
+            os_sched_exit(-1);
+        }
+        FINALLY_L(exit) {}
+    }
+    END_TRY_L(exit);
+}
 
-void display_settings(void);
-void switch_dummy_setting_1_data(void);
-void switch_dummy_setting_2_data(void);
+static void init_boot()
+{
+    if (init_keys() != 0)
+    {
+        app_kill();
+    }
 
-//////////////////////////////////////////////////////////////////////
-const char* settings_submenu_getter(unsigned int idx);
-void settings_submenu_selector(unsigned int idx);
-
-//////////////////////////////////////////////////////////////////////////////////////
-// Enable contract data submenu:
-
-void dummy_setting_1_data_change(unsigned int enabled) {
-    nvm_write((void *)&N_storage.dummy_setting_1, &enabled, 1);
     ui_idle();
 }
 
-const char* const dummy_setting_1_data_getter_values[] = {
-  "No",
-  "Yes",
-  "Back"
-};
+UX_STEP_NOCB(ux_idle_flow_1_step, pnn, {&C_icon_turtlecoin, "TurtleCoin", "  is Ready"});
 
-const char* dummy_setting_1_data_getter(unsigned int idx) {
-  if (idx < ARRAYLEN(dummy_setting_1_data_getter_values)) {
-    return dummy_setting_1_data_getter_values[idx];
-  }
-  return NULL;
-}
+UX_STEP_NOCB(ux_idle_flow_2_step, bn, {"Version", APPVERSION});
 
-void dummy_setting_1_data_selector(unsigned int idx) {
-  switch(idx) {
-    case 0:
-      dummy_setting_1_data_change(0);
-      break;
-    case 1:
-      dummy_setting_1_data_change(1);
-      break;
-    default:
-      ux_menulist_init(0, settings_submenu_getter, settings_submenu_selector);
-  }
-}
+UX_STEP_VALID(ux_idle_flow_3_step, pb, os_sched_exit(-1), {&C_icon_dashboard_x, "Quit"});
 
-//////////////////////////////////////////////////////////////////////////////////////
-// Display contract data submenu:
+UX_FLOW(ux_idle_flow, &ux_idle_flow_1_step, &ux_idle_flow_2_step, &ux_idle_flow_3_step, FLOW_LOOP);
 
-void dummy_setting_2_data_change(unsigned int enabled) {
-    nvm_write((void *)&N_storage.dummy_setting_2, &enabled, 1);
-    ui_idle();
-}
+UX_STEP_SPLASH(ux_boot_splash_step_1, pnn, init_boot(), {&C_icon_turtlecoin, "Safe, Fun &", "  Easy...  "});
 
-const char* const dummy_setting_2_data_getter_values[] = {
-  "No",
-  "Yes",
-  "Back"
-};
+UX_FLOW(ux_boot_splash_flow, &ux_boot_splash_step_1);
 
-const char* dummy_setting_2_data_getter(unsigned int idx) {
-  if (idx < ARRAYLEN(dummy_setting_2_data_getter_values)) {
-    return dummy_setting_2_data_getter_values[idx];
-  }
-  return NULL;
-}
-
-void dummy_setting_2_data_selector(unsigned int idx) {
-  switch(idx) {
-    case 0:
-      dummy_setting_2_data_change(0);
-      break;
-    case 1:
-      dummy_setting_2_data_change(1);
-      break;
-    default:
-      ux_menulist_init(0, settings_submenu_getter, settings_submenu_selector);
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////
-// Settings menu:
-
-const char* const settings_submenu_getter_values[] = {
-  "Dummy setting 1",
-  "Dummy setting 2",
-  "Back",
-};
-
-const char* settings_submenu_getter(unsigned int idx) {
-  if (idx < ARRAYLEN(settings_submenu_getter_values)) {
-    return settings_submenu_getter_values[idx];
-  }
-  return NULL;
-}
-
-void settings_submenu_selector(unsigned int idx) {
-  switch(idx) {
-    case 0:
-      ux_menulist_init_select(0, dummy_setting_1_data_getter, dummy_setting_1_data_selector, N_storage.dummy_setting_1);
-      break;
-    case 1:
-      ux_menulist_init_select(0, dummy_setting_2_data_getter, dummy_setting_2_data_selector, N_storage.dummy_setting_2);
-      break;
-    default:
-      ui_idle();
-  }
-}
-
-//////////////////////////////////////////////////////////////////////
-UX_STEP_NOCB(
-    ux_idle_flow_1_step, 
-    pnn, 
-    {
-      &C_boilerplate_logo,
-      "Boilerplate",
-      "is ready",
-    });
-UX_STEP_VALID(
-    ux_idle_flow_2_step,
-    pb,
-    ux_menulist_init(0, settings_submenu_getter, settings_submenu_selector),
-    {
-      &C_icon_coggle,
-      "Settings",
-    });
-UX_STEP_NOCB(
-    ux_idle_flow_3_step, 
-    bn, 
-    {
-      "Version",
-      APPVERSION,
-    });
-UX_STEP_VALID(
-    ux_idle_flow_4_step,
-    pb,
-    os_sched_exit(-1),
-    {
-      &C_icon_dashboard_x,
-      "Quit",
-    });
-UX_FLOW(ux_idle_flow,
-  &ux_idle_flow_1_step,
-  &ux_idle_flow_2_step,
-  &ux_idle_flow_3_step,
-  &ux_idle_flow_4_step,
-  FLOW_LOOP
-);
-
-void ui_idle(void) {
+void ui_idle()
+{
     // reserve a display stack slot if none yet
-    if(G_ux.stack_count == 0) {
+    if (G_ux.stack_count == 0)
+    {
         ux_stack_push();
     }
+
     ux_flow_init(0, ux_idle_flow, NULL);
+}
+
+void ui_splash()
+{
+    if (G_ux.stack_count == 0)
+    {
+        ux_stack_push();
+    }
+
+    ux_flow_init(0, ux_boot_splash_flow, NULL);
 }

@@ -20,21 +20,21 @@ $(error Environment variable BOLOS_SDK is not set)
 endif
 include $(BOLOS_SDK)/Makefile.defines
 
-APP_LOAD_PARAMS= --curve ed25519 --path "44'/1234'" --appFlags 0x240 $(COMMON_LOAD_PARAMS)
+APP_LOAD_PARAMS= --curve ed25519 --path "44'/2147485632'" --appFlags 0x240 $(COMMON_LOAD_PARAMS)
 
 APPVERSION_M=1
 APPVERSION_N=0
 APPVERSION_P=0
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
-APPNAME = "Boilerplate"
+APPNAME = "TurtleCoin"
 
 DEFINES += $(DEFINES_LIB)
 
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
-	ICONNAME=icons/nanox_app_boilerplate.gif
+	ICONNAME=icons/icon_turtlecoin.gif
 else
-	ICONNAME=icons/nanos_app_boilerplate.gif
+	ICONNAME=icons/icon_turtlecoin.gif
 endif
 
 
@@ -51,14 +51,16 @@ DEFINES   += OS_IO_SEPROXYHAL
 DEFINES   += HAVE_BAGL HAVE_SPRINTF
 DEFINES   += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=6 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
 DEFINES   += LEDGER_MAJOR_VERSION=$(APPVERSION_M) LEDGER_MINOR_VERSION=$(APPVERSION_N) LEDGER_PATCH_VERSION=$(APPVERSION_P)
+DEFINES   += CUSTOM_IO_APDU_BUFFER_SIZE=\(512\)
+DEFINES   += HAVE_BOLOS_APP_STACK_CANARY
 
 # U2F
 DEFINES   += HAVE_U2F HAVE_IO_U2F
-DEFINES   += U2F_PROXY_MAGIC=\"BOIL\"
+DEFINES   += U2F_PROXY_MAGIC=\"TURTLECOIN\"
 DEFINES   += USB_SEGMENT_SIZE=64
 DEFINES   += BLE_SEGMENT_SIZE=32 #max MTU, min 20
 
-WEBUSB_URL     = www.ledgerwallet.com
+WEBUSB_URL     = www.turtlecoin.lol
 DEFINES       += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
 
 DEFINES   += UNUSED\(x\)=\(void\)x
@@ -95,6 +97,8 @@ ifneq ($(DEBUG),0)
 else
         DEFINES   += PRINTF\(...\)=
 endif
+
+DEFINES   += DEBUG_BUILD=$(DEBUG)
 
 ##############
 #  Compiler  #
@@ -146,11 +150,9 @@ delete:
 	python -m ledgerblue.deleteApp $(COMMON_DELETE_PARAMS)
 
 release: all
-	export APP_LOAD_PARAMS_EVALUATED="$(shell printf '\\"%s\\" ' $(APP_LOAD_PARAMS))"; \
-	cat load-template.sh | envsubst > load.sh
-	chmod +x load.sh
-	tar -zcf boilerplate-ledger-app-$(APPVERSION).tar.gz load.sh bin/app.hex
-	rm load.sh
+	cp bin/app.hex bin/turtlecoin.hex
+	cp bin/app.elf bin/turtlecoin.elf
+	tar -zcf turtlecoin-ledger-app-$(APPVERSION).tar.gz bin/turtlecoin.hex bin/turtlecoin.elf
 
 # import generic rules from the sdk
 include $(BOLOS_SDK)/Makefile.rules
@@ -161,4 +163,4 @@ dep/%.d: %.c Makefile
 
 
 listvariants:
-	@echo VARIANTS COIN boilerplate
+	@echo VARIANTS COIN turtlecoin

@@ -1,26 +1,36 @@
-# Ledger boilerplate app
+# TurtleCoin® Ledger Application
 
 ## Overview
-This app is a boilerplate for a Nano S/X app.
-It does very little, and just expose a minimal API (get_app_config, get_address). 
+
+This application is designed to run on Ledger Nano S/X hardware wallets. It exposes just the necessary sensitive
+operations for keeping your private keys safe while offloading as much of the wallet mechanics as possible to the
+host system thereby keeping wallet processes as fast as possible.
 
 ## Building and installing
-To build and install the app on your Ledger Nano S you must set up the Ledger Nano S build environments. Please follow the Getting Started instructions at [here](https://ledger.readthedocs.io/en/latest/userspace/getting_started.html).
 
-If you don't want to setup a global environnment, you can also setup one just for this app by sourcing `prepare-devenv.sh` with the right target (`s` or `x`).
+To build and install the app on your Ledger Nano S you must set up the Ledger Nano S build environments.
 
-install prerequisite and switch to a Nano X dev-env:
+Please follow the Getting Started instructions via the
+[Getting Started Guide](https://ledger.readthedocs.io/en/latest/userspace/getting_started.html).
+
+##### Environment
+
+If you don't want to setup a global environment, you can also setup one just for this app by performing the following:
+
+**Note:** The Nano X SDK is not generally available at this time.
 
 ```bash
 sudo apt install python3-venv python3-dev libudev-dev libusb-1.0-0-dev
 
-# (x or s, depending on your device)
-source prepare-devenv.sh x 
+# (s, x, or blue depending on your device)
+source prepare-devenv.sh s
 ```
 
-Compile and load the app onto the device:
+##### Compilation
+
+Compile the application:
 ```bash
-make load
+make
 ```
 
 Refresh the repo (required after Makefile edits):
@@ -28,20 +38,15 @@ Refresh the repo (required after Makefile edits):
 make clean
 ```
 
+##### Loading the Application
+
+Load the the app on the device
+
+```bash
+make load
+```
+
 Remove the app from the device:
 ```bash
 make delete
 ```
-
-
-## Example of Ledger wallet functionality
-
-Test functionality:
-```bash
-# (x or s, depending on your device)
-source prepare-devenv.sh x
-python test_example.py --account_number 12345
-```
-
-## Documentation
-This follows the specification available in the [`api.asc`](https://github.com/LedgerHQ/ledger-app-boilerplate/blob/master/doc/api.asc).

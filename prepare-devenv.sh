@@ -2,6 +2,7 @@
 
 # SOURCE THIS FILE
 # . prepare-devenv blue|s|x
+CURRENTDIR=`pwd`
 
 if [ $# -ne 1 ]; then
     echo "Possible options: blue, s or x"
@@ -24,13 +25,12 @@ if [[ $(cat /etc/udev/rules.d/20-hw1.rules) == *'ATTRS{idVendor}=="2c97", ATTRS{
     return
 fi
 
-
 if [ ! -d dev-env ]; then
-    mkdir dev-env
-    mkdir dev-env/SDK
-    mkdir dev-env/CC
-    mkdir dev-env/CC/others
-    mkdir dev-env/CC/nanox
+    mkdir -p dev-env/SDK
+fi
+
+if [ ! -d dev-env/CC ]; then
+    mkdir -p dev-env/CC/others dev-env/CC/nanox
 
     wget https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q1-update/+download/gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2
     tar xf gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2
@@ -47,25 +47,32 @@ if [ ! -d dev-env ]; then
     tar xf clang+llvm.tar.xz
     rm clang+llvm.tar.xz
     mv clang+llvm* dev-env/CC/nanox/clang-arm-fropi
-
-    wget https://github.com/LedgerHQ/blue-secure-sdk/archive/blue-r21.1.tar.gz -O blue-secure-sdk.tar.gz
-    tar xf blue-secure-sdk.tar.gz
-    rm blue-secure-sdk.tar.gz
-    mv blue-secure-sdk* dev-env/SDK/blue-secure-sdk
-
-    wget https://github.com/LedgerHQ/nanos-secure-sdk/archive/nanos-160.tar.gz -O nanos-secure-sdk.tar.gz
-    tar xf nanos-secure-sdk.tar.gz
-    rm nanos-secure-sdk.tar.gz
-    mv nanos-secure-sdk* dev-env/SDK/nanos-secure-sdk
-
-    python3 -m venv dev-env/ledger_py3
-    source dev-env/ledger_py3/bin/activate
-    pip install wheel
-    pip install ledgerblue
 fi
 
+if [ ! -d dev-env/SDK/blue-secure-sdk ]; then
+    mkdir -p $CURRENTDIR/dev-env/SDK/blue-secure-sdk
+    cd $CURRENTDIR/dev-env/SDK/blue-secure-sdk
 
+    wget https://github.com/LedgerHQ/blue-secure-sdk/archive/blue-r21.1.tar.gz -O blue-secure-sdk.tar.gz
+    tar xf blue-secure-sdk.tar.gz --strip 1
+    rm blue-secure-sdk.tar.gz
+fi
+
+if [ ! -d dev-env/SDK/nanos-secure-sdk ]; then
+    mkdir -p $CURRENTDIR/dev-env/SDK/nanos-secure-sdk
+    cd $CURRENTDIR/dev-env/SDK/nanos-secure-sdk
+
+    wget https://github.com/LedgerHQ/nanos-secure-sdk/archive/nanos-160.tar.gz -O nanos-secure-sdk.tar.gz
+    tar xf nanos-secure-sdk.tar.gz --strip 1
+    rm nanos-secure-sdk.tar.gz
+fi
+
+cd $CURRENTDIR
+
+python3 -m venv dev-env/ledger_py3
 source dev-env/ledger_py3/bin/activate
+pip install wheel
+pip install ledgerblue
 
 if [[ $1 == "blue" ]]; then
     export BOLOS_SDK=$(pwd)/dev-env/SDK/blue-secure-sdk

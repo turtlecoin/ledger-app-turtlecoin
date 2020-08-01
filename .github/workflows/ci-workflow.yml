@@ -1,0 +1,79 @@
+name: Compilation
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '30 3 * * 0'
+
+jobs:
+  job_build_debug:
+    name: Build debug
+    runs-on: ubuntu-latest
+    container:
+      image: docker://ledgerhq/ledger-app-builder:1.6.0
+    steps:
+      - name: Clone
+        uses: actions/checkout@v2
+      - name: Build
+        run: |
+          make DEBUG=1
+      - name: Upload app binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: turtlecoin-app-debug
+          path: bin
+
+  job_build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    container:
+      image: docker://ledgerhq/ledger-app-builder:1.6.0
+    steps:
+      - name: Clone
+        uses: actions/checkout@v2
+      - name: Build
+        run: |
+          make
+      - name: Upload app binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: turtlecoin-app
+          path: bin
+
+  job_test:
+    name: Run Unit Tests
+    continue-on-error: true
+    needs: job_build_debug
+    runs-on: ubuntu-latest
+    container:
+      image: docker://ledgerhq/speculos:latest
+      ports:
+        - 9999:9999
+        - 40000:40000
+        - 41000:41000
+        - 42000:42000
+        - 43000:43000
+      options: --entrypoint /bin/bash
+    steps:
+      - name: Clone
+        uses: actions/checkout@v2
+      - name: Download app binary
+        uses: actions/download-artifact@v2
+        with:
+          name: turtlecoin-app-debug
+          path: bin
+      - name: Install Node
+        run: |
+          apt-get update -y && apt-get install -y curl tar unzip gcc g++ make git
+          curl -sL https://deb.nodesource.com/setup_12.x | bash -
+          apt-get install -y nodejs && cd tests && npm install
+      - name: Run test
+        run: |
+          nohup bash -c "python /speculos/speculos.py bin/app.elf --sdk 1.6 --seed \"stunning cool hexagon criminal dabbing dads magically enjoy ourselves ingested ongoing southern greater cigar serving pheasants pawnshop mystery powder sizes randomly melting custom kernels hexagon\" --apdu-port 9999 --button-port 42000 --automation-port 43000 --display headless" > speculos.log 2<&1 &
+          cd tests && npm test
+      - name: Upload Speculos log
+        uses: actions/upload-artifact@v2
+        with:
+          name: speculos-log
+          path: speculos.log
