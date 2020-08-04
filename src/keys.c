@@ -99,13 +99,6 @@ int init_keys()
                     THROW(ERR_SECKEY_TO_PUBKEY);
                 }
 
-                // Generate the base58 encoded wallet address from the public spend and
-                // public view keys
-                if (generate_public_address(wallet.spend.public, wallet.view.public, wallet.address) != 0)
-                {
-                    THROW(ERR_ADDRESS);
-                }
-
                 /**
                  * Write the magic bytes to the structure in RAM so that upon
                  * the next application load we do not have to perform these

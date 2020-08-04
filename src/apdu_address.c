@@ -26,6 +26,11 @@ void do_address()
     {
         TRY
         {
+            if (generate_public_address(PTR_SPEND_PUBLIC, PTR_VIEW_PUBLIC, APDU_ADDRESS) != 0)
+            {
+                THROW(ERR_ADDRESS);
+            }
+
             sendResponse(write_io_hybrid(APDU_ADDRESS, BASE58_ADDRESS_SIZE, APDU_ADDRESS_NAME, false), true);
         }
         CATCH_OTHER(e)
@@ -59,8 +64,6 @@ UX_FLOW(
 void handle_address(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {
     UNUSED(p2);
-
-    memcpy(APDU_ADDRESS, N_turtlecoin_wallet->address, BASE58_ADDRESS_SIZE);
 
     /**
      * If the APDU was sent requesting confirmation then

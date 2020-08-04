@@ -37,8 +37,6 @@ struct wallet_s
     key_pair_t view; // 64-bytes
 
     unsigned char magic[KEY_SIZE]; // 32-bytes
-
-    unsigned char address[BASE58_ADDRESS_SIZE]; // 99-bytes
 };
 
 typedef struct wallet_s wallet_t;
@@ -51,7 +49,6 @@ extern wallet_t N_state_pic;
 #define N_turtlecoin_wallet ((WIDE wallet_t *)PIC(&N_state_pic))
 #endif
 
-#define PTR_ADDRESS ((unsigned char *)N_turtlecoin_wallet->address)
 #define PTR_SPEND_PUBLIC ((unsigned char *)N_turtlecoin_wallet->spend.public)
 #define PTR_SPEND_PRIVATE ((unsigned char *)N_turtlecoin_wallet->spend.private)
 #define PTR_VIEW_PUBLIC ((unsigned char *)N_turtlecoin_wallet->view.public)
