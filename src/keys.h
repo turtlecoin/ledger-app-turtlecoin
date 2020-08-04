@@ -23,22 +23,22 @@
 
 struct key_pair_s
 {
-    unsigned char private[KEY_SIZE];
+    unsigned char private[KEY_SIZE]; // 32-bytes
 
-    unsigned char public[KEY_SIZE];
+    unsigned char public[KEY_SIZE]; // 32-bytes
 };
 
 typedef struct key_pair_s key_pair_t;
 
 struct wallet_s
 {
-    key_pair_t spend;
+    key_pair_t spend; // 64-bytes
 
-    key_pair_t view;
+    key_pair_t view; // 64-bytes
 
-    unsigned char magic[KEY_SIZE];
+    unsigned char magic[KEY_SIZE]; // 32-bytes
 
-    unsigned char address[BASE58_ADDRESS_SIZE];
+    unsigned char address[BASE58_ADDRESS_SIZE]; // 99-bytes
 };
 
 typedef struct wallet_s wallet_t;

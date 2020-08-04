@@ -66,70 +66,55 @@ int init_keys()
      */
     if (os_memcmp((void *)N_turtlecoin_wallet->magic, (void *)W_MAGIC, sizeof(W_MAGIC)) != 0)
     {
+        wallet_t wallet;
+
         BEGIN_TRY
         {
-#define SPEND_PRIVATE WORKING_SET
-#define SPEND_PUBLIC SPEND_PRIVATE + KEY_SIZE
-#define VIEW_PRIVATE SPEND_PUBLIC + KEY_SIZE
-#define VIEW_PUBLIC VIEW_PRIVATE + KEY_SIZE
-#define ADDRESS VIEW_PUBLIC + KEY_SIZE
             TRY
             {
                 // Zero out enough space in NVRAM for the size of our wallet structure
                 nvm_write((void *)N_turtlecoin_wallet, NULL, sizeof(wallet_t));
 
                 // Retrieve the private spend key for which all things are made
-                if (hw_retrieve_private_spend_key(SPEND_PRIVATE) != 0)
+                if (hw_retrieve_private_spend_key(wallet.spend.private) != 0)
                 {
                     THROW(ERR_PRIVATE_SPEND);
                 }
 
-                // Write the private spend key to NVRAM
-                nvm_write((void *)N_turtlecoin_wallet->spend.private, SPEND_PRIVATE, KEY_SIZE);
-
                 // Generate the public spend key from the private spend key
-                if (hw_private_key_to_public_key(SPEND_PUBLIC, SPEND_PRIVATE) != 0)
+                if (hw_private_key_to_public_key(wallet.spend.public, wallet.spend.private) != 0)
                 {
                     THROW(ERR_SECKEY_TO_PUBKEY);
                 }
 
-                // Write the public spend key to NVRAM
-                nvm_write((void *)N_turtlecoin_wallet->spend.public, SPEND_PUBLIC, KEY_SIZE);
-
                 // Generate the private view key from the private spend key
-                if (hw_generate_private_view_key(VIEW_PRIVATE, SPEND_PRIVATE) != 0)
+                if (hw_generate_private_view_key(wallet.view.private, wallet.spend.private) != 0)
                 {
                     THROW(ERR_PRIVATE_VIEW);
                 }
 
-                // Write the private view key to NVRAM
-                nvm_write((void *)N_turtlecoin_wallet->view.private, VIEW_PRIVATE, KEY_SIZE);
-
                 // Generate the public view key from the private view key
-                if (hw_private_key_to_public_key(VIEW_PUBLIC, VIEW_PRIVATE) != 0)
+                if (hw_private_key_to_public_key(wallet.view.public, wallet.view.private) != 0)
                 {
                     THROW(ERR_SECKEY_TO_PUBKEY);
                 }
 
-                // Write the public view key to NVRAM
-                nvm_write((void *)N_turtlecoin_wallet->view.public, VIEW_PUBLIC, KEY_SIZE);
-
                 // Generate the base58 encoded wallet address from the public spend and
                 // public view keys
-                if (generate_public_address(SPEND_PUBLIC, VIEW_PUBLIC, ADDRESS) != 0)
+                if (generate_public_address(wallet.spend.public, wallet.view.public, wallet.address) != 0)
                 {
                     THROW(ERR_ADDRESS);
                 }
 
-                // Write the base58 encoded wallet address to NVRAM
-                nvm_write((void *)N_turtlecoin_wallet->address, ADDRESS, 99);
-
                 /**
-                 * Write the magic bytes to the structure in NVRAM so that upon
+                 * Write the magic bytes to the structure in RAM so that upon
                  * the next application load we do not have to perform these
                  * operations again
                  */
-                nvm_write((void *)N_turtlecoin_wallet->magic, (void *)W_MAGIC, sizeof(W_MAGIC));
+                os_memmove(wallet.magic, W_MAGIC, sizeof(W_MAGIC));
+
+                // write the wallet structure to NVRAM
+                nvm_write((void *)N_turtlecoin_wallet, (void *)&wallet, sizeof(wallet_t));
 
                 CLOSE_TRY;
 
@@ -142,12 +127,7 @@ int init_keys()
             FINALLY
             {
                 // Explicitly clear the working memory
-                explicit_bzero(WORKING_SET, WORKING_SET_SIZE);
-#undef ADDRESS
-#undef VIEW_PUBLIC
-#undef VIEW_PRIVATE
-#undef SPEND_PUBLIC
-#undef SPEND_PRIVATE
+                explicit_bzero(&wallet, sizeof(wallet_t));
             }
             END_TRY;
         }
