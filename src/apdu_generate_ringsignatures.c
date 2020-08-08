@@ -17,6 +17,7 @@
 #include "apdu_generate_ringsignatures.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_GRS_SIZE \
@@ -37,20 +38,21 @@ static void do_generate_ring_signatures()
     {
         TRY
         {
-            if (hw_generate_ring_signatures(
-                    APDU_GRS_SIGNATURES,
-                    APDU_GRS_TX_PUBLIC_KEY,
-                    APDU_GRS_OUTPUT_IDX,
-                    APDU_GRS_OUTPUT_KEY,
-                    APDU_GRS_TX_PREFIX_HASH,
-                    APDU_GRS_INPUT_KEYS,
-                    APDU_GRS_REAL_OUTPUT_IDX,
-                    N_turtlecoin_wallet->view.private,
-                    N_turtlecoin_wallet->spend.private,
-                    N_turtlecoin_wallet->spend.public)
-                != 0)
+            const uint16_t status = hw_generate_ring_signatures(
+                APDU_GRS_SIGNATURES,
+                APDU_GRS_TX_PUBLIC_KEY,
+                APDU_GRS_OUTPUT_IDX,
+                APDU_GRS_OUTPUT_KEY,
+                APDU_GRS_TX_PREFIX_HASH,
+                APDU_GRS_INPUT_KEYS,
+                APDU_GRS_REAL_OUTPUT_IDX,
+                N_turtlecoin_wallet->view.private,
+                N_turtlecoin_wallet->spend.private,
+                N_turtlecoin_wallet->spend.public);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_GENERATE_RING_SIGS);
+                THROW(status);
             }
 
             CLOSE_TRY;
@@ -62,7 +64,7 @@ static void do_generate_ring_signatures()
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -86,7 +88,9 @@ UX_FLOW(ux_display_generate_ringsignatures_splash, &ux_display_generate_ringsign
 
 UX_STEP_NOCB(ux_display_generate_ringsignatures_flow_1_step, pnn, {&C_icon_turtlecoin, "Generate Ring", "Signatures?"});
 
-UX_STEP_NOCB(ux_display_generate_ringsignatures_flow_2_step, bnnn_paging,
+UX_STEP_NOCB(
+    ux_display_generate_ringsignatures_flow_2_step,
+    bnnn_paging,
     {.title = "Output Key", .text = (char *)DISPLAY_KEY_HEX});
 
 UX_STEP_VALID(
@@ -114,7 +118,11 @@ void handle_generate_ring_signatures(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_GRS_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_GRS_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

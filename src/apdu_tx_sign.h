@@ -14,19 +14,13 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#ifndef APDU_CHECK_KEY_H
-#define APDU_CHECK_KEY_H
+#ifndef APDU_TX_SIGN_H
+#define APDU_TX_SIGN_H
 
 #include <stdint.h>
 
-#define APDU_CHECK_KEY_NAME ((unsigned char *)"CHECKKEY")
+#define APDU_TX_SIGN_NAME ((unsigned char *)"TX_SIGN")
 
-void handle_check_key(
-    uint8_t p1,
-    uint8_t p2,
-    uint8_t *dataBuffer,
-    uint16_t dataLength,
-    volatile unsigned int *flags,
-    volatile unsigned int *tx);
+void handle_tx_sign(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx);
 
-#endif // APDU_CHECK_KEY_H
+#endif // APDU_TX_SIGN_H

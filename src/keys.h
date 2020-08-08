@@ -21,25 +21,21 @@
 #include <common.h>
 #include <hw_crypto.h>
 
-struct key_pair_s
+typedef struct key_pair_s
 {
     unsigned char private[KEY_SIZE]; // 32-bytes
 
     unsigned char public[KEY_SIZE]; // 32-bytes
-};
+} key_pair_t;
 
-typedef struct key_pair_s key_pair_t;
-
-struct wallet_s
+typedef struct wallet_s
 {
     key_pair_t spend; // 64-bytes
 
     key_pair_t view; // 64-bytes
 
     unsigned char magic[KEY_SIZE]; // 32-bytes
-};
-
-typedef struct wallet_s wallet_t;
+} wallet_t;
 
 #ifdef TARGET_NANOX
 extern const wallet_t N_state_pic;
@@ -54,10 +50,11 @@ extern wallet_t N_state_pic;
 #define PTR_VIEW_PUBLIC ((unsigned char *)N_turtlecoin_wallet->view.public)
 #define PTR_VIEW_PRIVATE ((unsigned char *)N_turtlecoin_wallet->view.private)
 
-int init_keys();
+uint16_t init_keys();
 
-int reset_keys();
+uint16_t reset_keys();
 
-int generate_public_address(const unsigned char *publicSpend, const unsigned char *publicView, unsigned char *address);
+uint16_t
+    generate_public_address(const unsigned char *publicSpend, const unsigned char *publicView, unsigned char *address);
 
 #endif // KEYS_H

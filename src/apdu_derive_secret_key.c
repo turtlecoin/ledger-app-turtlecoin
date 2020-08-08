@@ -17,6 +17,7 @@
 #include "apdu_derive_secret_key.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_DSK_SIZE KEY_SIZE + sizeof(uint32_t)
@@ -30,10 +31,12 @@ static void do_derive_secret_key()
     {
         TRY
         {
-            if (hw_derive_secret_key(APDU_DSK_SECRET_KEY, APDU_DSK_DERIVATION, APDU_DSK_OUTPUT_IDX, PTR_SPEND_PRIVATE)
-                != 0)
+            const uint16_t status =
+                hw_derive_secret_key(APDU_DSK_SECRET_KEY, APDU_DSK_DERIVATION, APDU_DSK_OUTPUT_IDX, PTR_SPEND_PRIVATE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_PUBKEY);
+                THROW(status);
             }
 
             CLOSE_TRY;
@@ -42,7 +45,7 @@ static void do_derive_secret_key()
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -66,7 +69,9 @@ UX_FLOW(ux_display_derive_secret_key_manual_flow, &ux_display_derive_secret_key_
 
 UX_STEP_NOCB(ux_display_derive_secret_key_flow_1_step, pnn, {&C_icon_turtlecoin, "Derive", "Secret Key?"});
 
-UX_STEP_NOCB(ux_display_derive_secret_key_flow_2_step, bnnn_paging,
+UX_STEP_NOCB(
+    ux_display_derive_secret_key_flow_2_step,
+    bnnn_paging,
     {.title = "Derivation", .text = (char *)DISPLAY_KEY_HEX});
 
 UX_STEP_VALID(
@@ -94,7 +99,11 @@ void handle_derive_secret_key(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_DSK_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_DSK_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

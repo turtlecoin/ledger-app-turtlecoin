@@ -14,60 +14,58 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include "apdu_view_secret_key.h"
+#include "apdu_tx_reset.h"
 
-#include <keys.h>
 #include <transaction.h>
 #include <utils.h>
 
-#define APDU_VSK WORKING_SET
-
-static void do_view_secret_key()
+static void do_tx_reset()
 {
     BEGIN_TRY
     {
         TRY
         {
-            sendResponse(write_io_hybrid(PTR_VIEW_PRIVATE, KEY_SIZE, APDU_VIEW_SECRET_KEY_NAME, true), true);
+            const uint16_t status = tx_reset();
+
+            if (status != OP_OK)
+            {
+                THROW(status);
+            }
+
+            CLOSE_TRY;
+
+            sendResponse(0, true);
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_NVRAM_READ);
+            sendError(e);
         }
-        FINALLY
-        {
-            // Explicitly clear the working memory
-            explicit_bzero(WORKING_SET, WORKING_SET_SIZE);
-        };
+        FINALLY {}
     }
     END_TRY;
 }
 
-UX_STEP_NOCB(ux_display_view_secret_key_flow_1_step, pnn, {&C_icon_turtlecoin, "Export  View", "Private Key?"});
+UX_STEP_SPLASH(ux_tx_reset_1_step, pnn, do_tx_reset(), {&C_icon_turtlecoin, "Clearing", "Transaction State..."});
 
-UX_STEP_NOCB(ux_display_view_secret_key_flow_2_step, bnnn_paging, {.title = "Private View", .text = (char *)APDU_VSK});
+UX_FLOW(ux_tx_reset_flow, &ux_tx_reset_1_step);
 
-UX_STEP_VALID(ux_display_view_secret_key_flow_3_step, pb, do_view_secret_key(), {&C_icon_validate_14, "Approve"});
+UX_STEP_NOCB(ux_tx_reset_2_step, pnn, {&C_icon_turtlecoin, "Reset Transaction", "State?"});
 
-UX_STEP_VALID(ux_display_view_secret_key_flow_4_step, pb, do_deny(), {&C_icon_crossmark, "Reject"});
+UX_STEP_VALID(ux_tx_reset_3_step, pb, ux_flow_init(0, ux_tx_reset_flow, NULL), {&C_icon_validate_14, "Approve"});
 
-UX_FLOW(
-    ux_display_view_secret_key_flow,
-    &ux_display_view_secret_key_flow_1_step,
-    &ux_display_view_secret_key_flow_2_step,
-    &ux_display_view_secret_key_flow_3_step,
-    &ux_display_view_secret_key_flow_4_step);
+UX_STEP_VALID(ux_tx_reset_4_step, pb, do_deny(), {&C_icon_crossmark, "Reject"});
 
-void handle_view_secret_key(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
+UX_FLOW(ux_tx_reset_confirm_flow, &ux_tx_reset_2_step, &ux_tx_reset_3_step, &ux_tx_reset_4_step);
+
+void handle_tx_reset(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {
     UNUSED(p2);
 
-    if (tx_state() != TX_UNUSED)
+    // if we are not currently in a transaction construction state then we can return quickly
+    if (tx_state() == TX_UNUSED)
     {
-        return sendError(ERR_TRANSACTION_STATE);
+        return sendResponse(0, true);
     }
-
-    toHexString(PTR_VIEW_PRIVATE, KEY_SIZE, APDU_VSK, KEY_HEXSTR_SIZE);
 
     /**
      * If the APDU was sent requesting confirmation then
@@ -77,13 +75,13 @@ void handle_view_secret_key(uint8_t p1, uint8_t p2, volatile unsigned int *flags
      */
     if (p1 == P1_CONFIRM)
     {
-        ux_flow_init(0, ux_display_view_secret_key_flow, NULL);
+        ux_flow_init(0, ux_tx_reset_confirm_flow, NULL);
 
         *flags |= IO_ASYNCH_REPLY;
     }
     else if (p1 == P1_NON_CONFIRM && DEBUG_BUILD == 1)
     {
-        do_view_secret_key();
+        ux_flow_init(0, ux_tx_reset_flow, NULL);
 
         *flags |= IO_ASYNCH_REPLY;
     }

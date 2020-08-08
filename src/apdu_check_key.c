@@ -17,6 +17,7 @@
 #include "apdu_check_key.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_CK_SCALAR WORKING_SET
@@ -31,35 +32,38 @@ static void do_check_key()
 
             sendResponse(write_io_hybrid(&status, sizeof(status), APDU_CHECK_KEY_NAME, true), true);
         }
-        CATCH_OTHER(e) {
-            sendError(ERR_UNKNOWN_ERROR);
+        CATCH_OTHER(e)
+        {
+            sendError(ERR_CHECK_KEY);
         }
-        FINALLY {
+        FINALLY
+        {
             // Explicitly clear the working memory
             explicit_bzero(WORKING_SET, WORKING_SET_SIZE);
         };
-    } END_TRY;
+    }
+    END_TRY;
 }
 
-UX_STEP_SPLASH(
-    ux_check_key_1_step,
-    pnn,
-    do_check_key(),
-    {&C_icon_turtlecoin, "Checking", "Key"});
+UX_STEP_SPLASH(ux_check_key_1_step, pnn, do_check_key(), {&C_icon_turtlecoin, "Checking", "Key"});
 
 UX_FLOW(ux_check_key_flow, &ux_check_key_1_step);
 
 void handle_check_key(
-        uint8_t p1,
-        uint8_t p2,
-        uint8_t *dataBuffer,
-        uint16_t dataLength,
-        volatile unsigned int *flags,
-        volatile unsigned int *tx)
+    uint8_t p1,
+    uint8_t p2,
+    uint8_t *dataBuffer,
+    uint16_t dataLength,
+    volatile unsigned int *flags,
+    volatile unsigned int *tx)
 {
     UNUSED(p2);
 
-    if (dataLength != KEY_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != KEY_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

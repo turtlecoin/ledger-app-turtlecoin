@@ -19,6 +19,7 @@
 #ifndef BASE58_H
 #define BASE58_H
 
+#include <common.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -27,6 +28,6 @@
 #define CHECKSUM_SIZE 4
 #define BASE58_ADDRESS_STR_SIZE BASE58_ADDRESS_SIZE + 1
 
-int base58_encode(const unsigned char *rawAddress, unsigned char *str_b58);
+uint16_t base58_encode(const unsigned char *rawAddress, unsigned char *str_b58);
 
 #endif // BASE58_H

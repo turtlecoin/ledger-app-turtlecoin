@@ -17,6 +17,7 @@
 #include "apdu_derive_public_key.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_DPK_SIZE KEY_SIZE + sizeof(uint32_t)
@@ -32,10 +33,12 @@ static void do_derive_public_key(const size_t approve_all_this_session)
     {
         TRY
         {
-            if (hw_derive_public_key(APDU_DPK_PUBLIC_KEY, APDU_DPK_DERIVATION, APDU_DPK_OUTPUT_IDX, PTR_SPEND_PUBLIC)
-                != 0)
+            const uint16_t status =
+                hw_derive_public_key(APDU_DPK_PUBLIC_KEY, APDU_DPK_DERIVATION, APDU_DPK_OUTPUT_IDX, PTR_SPEND_PUBLIC);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_PUBKEY);
+                THROW(status);
             }
 
             pre_approved = approve_all_this_session;
@@ -46,7 +49,7 @@ static void do_derive_public_key(const size_t approve_all_this_session)
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -106,7 +109,11 @@ void handle_derive_public_key(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_DPK_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_DPK_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

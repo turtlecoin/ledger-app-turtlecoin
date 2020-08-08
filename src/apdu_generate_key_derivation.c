@@ -17,6 +17,7 @@
 #include "apdu_generate_key_derivation.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_GKD_SIZE KEY_SIZE
@@ -31,9 +32,12 @@ static void do_generate_key_deriviation(const size_t approve_all_this_session)
     {
         TRY
         {
-            if (hw_generate_key_derivation(APDU_GKD_DERIVATION, APDU_GKD_TX_PUBLIC_KEY, PTR_VIEW_PRIVATE) != 0)
+            const uint16_t status =
+                hw_generate_key_derivation(APDU_GKD_DERIVATION, APDU_GKD_TX_PUBLIC_KEY, PTR_VIEW_PRIVATE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_KEY_DERIVATION);
+                THROW(status);
             }
 
             pre_approved = approve_all_this_session;
@@ -44,7 +48,7 @@ static void do_generate_key_deriviation(const size_t approve_all_this_session)
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -76,7 +80,9 @@ UX_FLOW(ux_display_generate_key_derivation_auto_flow, &ux_display_generate_key_d
 
 UX_STEP_NOCB(ux_display_generate_key_derivation_flow_1_step, pnn, {&C_icon_turtlecoin, "Generate", "Derivation?"});
 
-UX_STEP_NOCB(ux_display_generate_key_derivation_flow_2_step, bnnn_paging,
+UX_STEP_NOCB(
+    ux_display_generate_key_derivation_flow_2_step,
+    bnnn_paging,
     {.title = "Tx Public Key", .text = (char *)DISPLAY_KEY_HEX});
 
 UX_STEP_VALID(
@@ -111,7 +117,11 @@ void handle_generate_key_derivation(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_GKD_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_GKD_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

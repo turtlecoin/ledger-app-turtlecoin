@@ -17,6 +17,7 @@
 #include "apdu_spend_secret_key.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_SSK WORKING_SET
@@ -31,7 +32,7 @@ static void do_spend_secret_key()
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(ERR_NVRAM_READ);
         }
         FINALLY
         {
@@ -95,6 +96,11 @@ UX_FLOW(
 void handle_spend_secret_key(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {
     UNUSED(p2);
+
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
 
     toHexString(PTR_SPEND_PRIVATE, KEY_SIZE, APDU_SSK, KEY_HEXSTR_SIZE);
 

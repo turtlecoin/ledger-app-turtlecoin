@@ -14,51 +14,61 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include "apdu_check_ringsignatures.h"
+#include "apdu_tx_dump.h"
 
-#include <keys.h>
 #include <transaction.h>
 #include <utils.h>
 
-#define APDU_CHRS_SIZE KEY_SIZE + KEY_SIZE + (KEY_SIZE * RING_PARTICIPANTS) + (SIG_SIZE * RING_PARTICIPANTS)
-#define APDU_CHRS_TX_PREFIX_HASH WORKING_SET
-#define APDU_CHRS_KEY_IMAGE APDU_CHRS_TX_PREFIX_HASH + KEY_SIZE
-#define APDU_CHRS_PUBLIC_KEYS APDU_CHRS_KEY_IMAGE + KEY_SIZE
-#define APDU_CHRS_SIGNATURES APDU_CHRS_PUBLIC_KEYS + (KEY_SIZE * RING_PARTICIPANTS)
+#define APDU_TXD_SIZE sizeof(uint16_t)
 
-static void do_check_ring_signatures()
+#define APDU_TXD_START_OFFSET_INDEX WORKING_SET
+#define APDU_TXD_START_OFFSET readUint16BE(APDU_TXD_START_OFFSET_INDEX)
+
+#define APDU_TXD_RESPONSE WORKING_SET
+
+static void do_tx_dump()
 {
     BEGIN_TRY
     {
         TRY
         {
-            unsigned char status = hw_check_ring_signatures(
-                APDU_CHRS_TX_PREFIX_HASH, APDU_CHRS_KEY_IMAGE, APDU_CHRS_PUBLIC_KEYS, APDU_CHRS_SIGNATURES);
+            if (APDU_TXD_START_OFFSET > tx_size())
+            {
+                THROW(ERR_OUT_OF_RANGE);
+            }
 
-            sendResponse(write_io_hybrid(&status, sizeof(status), APDU_CHECK_RING_SIGNATURES_NAME, true), true);
+            uint16_t length = tx_size() - APDU_TXD_START_OFFSET;
+
+            if (length > TX_MAX_DUMP_SIZE)
+            {
+                length = TX_MAX_DUMP_SIZE;
+            }
+
+            const uint16_t status = tx_dump(APDU_TXD_RESPONSE, APDU_TXD_START_OFFSET, length);
+
+            if (status != OP_OK)
+            {
+                THROW(status);
+            }
+
+            CLOSE_TRY;
+
+            sendResponse(write_io_hybrid(APDU_TXD_RESPONSE, length, APDU_TX_DUMP_NAME, true), true);
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_CHECK_RING_SIGS);
+            sendError(e);
         }
-        FINALLY
-        {
-            // Explicitly clear the working memory
-            explicit_bzero(WORKING_SET, WORKING_SET_SIZE);
-        };
+        FINALLY {}
     }
     END_TRY;
 }
 
-UX_STEP_SPLASH(
-    ux_check_ring_signatures_1_step,
-    pnn,
-    do_check_ring_signatures(),
-    {&C_icon_turtlecoin, "Checking", "Ring Signatures"});
+UX_STEP_SPLASH(ux_tx_dump_1_step, pnn, do_tx_dump(), {&C_icon_turtlecoin, "Dumping", "Transaction..."});
 
-UX_FLOW(ux_check_ring_signatures_flow, &ux_check_ring_signatures_1_step);
+UX_FLOW(ux_tx_dump_flow, &ux_tx_dump_1_step);
 
-void handle_check_ring_signatures(
+void handle_tx_dump(
     uint8_t p1,
     uint8_t p2,
     uint8_t *dataBuffer,
@@ -66,13 +76,15 @@ void handle_check_ring_signatures(
     volatile unsigned int *flags,
     volatile unsigned int *tx)
 {
+    UNUSED(p1);
+
     UNUSED(p2);
 
-    if (tx_state() != TX_UNUSED)
+    if (tx_state() != TX_COMPLETE)
     {
         return sendError(ERR_TRANSACTION_STATE);
     }
-    else if (dataLength != APDU_CHRS_SIZE)
+    else if (dataLength != APDU_TXD_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }
@@ -80,7 +92,7 @@ void handle_check_ring_signatures(
     // copy the data buffer into the working set
     os_memmove(WORKING_SET, dataBuffer, dataLength);
 
-    ux_flow_init(0, ux_check_ring_signatures_flow, NULL);
+    ux_flow_init(0, ux_tx_dump_flow, NULL);
 
     *flags |= IO_ASYNCH_REPLY;
 }

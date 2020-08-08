@@ -36,9 +36,9 @@ unsigned int ptrLength(const unsigned char *ptr)
 
 unsigned int encode_varint(unsigned char *output, const uint64_t value, const size_t max_length)
 {
-    unsigned int length = 0;
-
     uint64_t val = value;
+
+    unsigned int length = 0;
 
     while (val >= 0x80)
     {

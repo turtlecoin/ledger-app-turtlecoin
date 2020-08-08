@@ -16,6 +16,7 @@
 
 #include <apdu_address.h>
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_ADDRESS WORKING_SET
@@ -26,16 +27,18 @@ void do_address()
     {
         TRY
         {
-            if (generate_public_address(PTR_SPEND_PUBLIC, PTR_VIEW_PUBLIC, APDU_ADDRESS) != 0)
+            const uint16_t status = generate_public_address(PTR_SPEND_PUBLIC, PTR_VIEW_PUBLIC, APDU_ADDRESS);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_ADDRESS);
+                THROW(status);
             }
 
             sendResponse(write_io_hybrid(APDU_ADDRESS, BASE58_ADDRESS_SIZE, APDU_ADDRESS_NAME, false), true);
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -64,6 +67,11 @@ UX_FLOW(
 void handle_address(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {
     UNUSED(p2);
+
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
 
     /**
      * If the APDU was sent requesting confirmation then

@@ -1,6 +1,7 @@
 /*******************************************************************************
  *   Ledger Blue
- *   (c) 2016 Ledger
+ *   (c) 2017-2020 Cedric Mesnil <cslashm@gmail.com>, Ledger SAS.
+ *   (c) 2020 Ledger SAS.
  *   (c) 2020 The TurtleCoin Developers
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,13 @@
  ********************************************************************************/
 
 #include "utils.h"
+
+uint64_t readUint64BE(uint8_t *buffer)
+{
+    return (uint64_t)((uint64_t)buffer[0] << 56) | ((uint64_t)buffer[1] << 48) | ((uint64_t)buffer[2] << 40)
+           | ((uint64_t)buffer[3] << 32) | ((uint64_t)buffer[4] << 24) | ((uint64_t)buffer[5] << 16)
+           | ((uint64_t)buffer[6] << 8) | ((uint64_t)buffer[7]);
+}
 
 uint32_t readUint32BE(uint8_t *buffer)
 {
@@ -42,6 +50,11 @@ uint16_t readUint16BE(uint8_t *buffer)
         FINALLY {}
     }
     END_TRY;
+}
+
+uint8_t readUint8(uint8_t *buffer)
+{
+    return (buffer[0]);
 }
 
 void uint16ToChar(unsigned char *r, const uint16_t value)
@@ -169,4 +182,62 @@ void toHexString(const unsigned char *in, const unsigned int in_len, unsigned ch
     }
 
     out[out_len] = '\0';
+}
+
+unsigned int amountToString(unsigned char *out, uint64_t value, const unsigned int max_length)
+{
+    /**
+     * SPRINTF and using %llu doesn't seem to work on this platform
+     * for some reason so we have to do this a bit differently which
+     * is very, very, very annoying to say the least.
+     *
+     * Adapted from
+     * https://github.com/LedgerHQ/app-monero/blob/b8eef4f57310ab3fce229e9467b35dda05112af2/src/monero_crypto.c
+     */
+
+    // max uint64 is 18446744073709551616, aka 20 char, plus dot
+    char string_amount[22] = {0};
+
+    // we start at the length of string_amount minus 1 so that it's a C-string
+    unsigned int offset = 20;
+
+    unsigned int places = 0;
+
+    // clear the output area
+    explicit_bzero(out, max_length);
+
+    // loop through and write it out one position at a time
+    while (value || places < (DECIMAL_PLACES + 1)) // +1 so that we get a leading 0
+    {
+        // if we encounter the position where our point (.) should be, insert it
+        if (places == DECIMAL_PLACES)
+        {
+            string_amount[offset] = '.';
+
+            offset--;
+        }
+
+        // modular math because, it's crypto #amirite?
+        string_amount[offset] = 0x30 + (value % 10);
+
+        // to the left, to the left...
+        value = value / 10;
+
+        offset--;
+
+        // bump the number of places we've written to
+        places++;
+    }
+
+    unsigned int length = sizeof(string_amount) - offset - 1; // it's offset based so it's (-1)
+
+    // if our length exceeds that of which we're going to try to dump into, don't
+    if (length > max_length)
+    {
+        THROW(ERR_OUT_OF_RANGE);
+    }
+
+    os_memmove(out, string_amount + offset + 1, length);
+
+    return length;
 }

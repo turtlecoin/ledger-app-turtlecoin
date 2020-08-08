@@ -17,6 +17,7 @@
 #include "apdu_public_keys.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_PK_KEYS WORKING_SET
@@ -33,7 +34,7 @@ static void do_public_keys()
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(ERR_NVRAM_READ);
         }
         FINALLY
         {
@@ -65,6 +66,11 @@ UX_FLOW(
 void handle_public_keys(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {
     UNUSED(p2);
+
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
 
     toHexString(PTR_SPEND_PUBLIC, KEY_SIZE, APDU_PK_SPEND, KEY_HEXSTR_SIZE);
 

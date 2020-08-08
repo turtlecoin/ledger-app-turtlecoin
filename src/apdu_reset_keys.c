@@ -17,18 +17,33 @@
 #include "apdu_reset_keys.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 static void do_reset_keys()
 {
-    if (reset_keys() != 0)
+    BEGIN_TRY
     {
-        sendError(ERR_RESET_KEYS);
+        TRY
+        {
+            const uint16_t status = reset_keys();
+
+            if (status != OP_OK)
+            {
+                THROW(status);
+            }
+
+            CLOSE_TRY;
+
+            sendResponse(0, true);
+        }
+        CATCH_OTHER(e)
+        {
+            sendError(e);
+        }
+        FINALLY {}
     }
-    else
-    {
-        sendResponse(0, true);
-    }
+    END_TRY;
 }
 
 UX_STEP_SPLASH(
@@ -54,6 +69,11 @@ UX_FLOW(ux_reset_keys_flow, &ux_reset_keys_flow_1_step, &ux_reset_keys_flow_2_st
 void handle_reset(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {
     UNUSED(p2);
+
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
 
     /**
      * If the APDU was sent requesting confirmation then

@@ -23,11 +23,8 @@
 
 static const uint32_t HARDENED_OFFSET = 0x80000000;
 
-static const uint32_t derivePath[BIP32_PATH] = {44 | HARDENED_OFFSET,
-                                                2147485632 | HARDENED_OFFSET,
-                                                0 | HARDENED_OFFSET,
-                                                0 | HARDENED_OFFSET,
-                                                0 | HARDENED_OFFSET};
+static const uint32_t derivePath[BIP32_PATH] =
+    {44 | HARDENED_OFFSET, 2147485632 | HARDENED_OFFSET, 0 | HARDENED_OFFSET, 0 | HARDENED_OFFSET, 0 | HARDENED_OFFSET};
 
 static const unsigned char WIDE C_ED25519_G[65] = {
     0x04, 0x21, 0x69, 0x36, 0xd3, 0xcd, 0x6e, 0x53, 0xfe, 0xc0, 0xa4, 0xe2, 0x31, 0xfd, 0xd6, 0xdc, 0x5c,
@@ -104,7 +101,7 @@ static void reverse32(unsigned char *result, const unsigned char *source)
  * @param public the public key to load
  * @return whether the operation succeeded
  */
-static int hw_ge_frombytes_vartime(unsigned char *point, const unsigned char *public)
+static uint16_t hw_ge_frombytes_vartime(unsigned char *point, const unsigned char *public)
 {
     BEGIN_TRY
     {
@@ -125,11 +122,11 @@ static int hw_ge_frombytes_vartime(unsigned char *point, const unsigned char *pu
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return ERR_GE_FROMBYTES_VARTIME;
         }
         FINALLY {}
     }
@@ -179,7 +176,7 @@ static void hw_sc_reduce32(unsigned char *r, const unsigned char *s)
  * @param d the key derivation
  * @param n the output index
  */
-static int hw_derivation_to_scalar(unsigned char *r, const unsigned char *d, const size_t n)
+static uint16_t hw_derivation_to_scalar(unsigned char *r, const unsigned char *d, const size_t n)
 {
     unsigned char buffer[KEY_SIZE + 8] = {0};
 
@@ -195,15 +192,17 @@ static int hw_derivation_to_scalar(unsigned char *r, const unsigned char *d, con
     pos += encode_varint(buffer + pos, n, 8);
 
     // hash the buffer
-    if (hw_keccak(buffer, pos, buffer) != 0)
+    const uint16_t status = hw_keccak(buffer, pos, buffer);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // reduce the buffer to a scalar
     hw_sc_reduce32(r, buffer);
 
-    return 0;
+    return OP_OK;
 }
 
 /**
@@ -306,22 +305,26 @@ static void hw_sc_mulsub(unsigned char *r, const unsigned char *a, const unsigne
  * @param p the first point
  * @param q the second point
  */
-static int hw_ge_add(unsigned char *r, const unsigned char *p, const unsigned char *q)
+static uint16_t hw_ge_add(unsigned char *r, const unsigned char *p, const unsigned char *q)
 {
     unsigned char pxy[SIG_STR_SIZE];
 
     unsigned char qxy[SIG_STR_SIZE];
 
     // load point #1
-    if (hw_ge_frombytes_vartime(pxy, p) != 0)
+    uint16_t status = hw_ge_frombytes_vartime(pxy, p);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // load point #2
-    if (hw_ge_frombytes_vartime(qxy, q) != 0)
+    status = hw_ge_frombytes_vartime(qxy, q);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // add them together
@@ -330,7 +333,7 @@ static int hw_ge_add(unsigned char *r, const unsigned char *p, const unsigned ch
     // compress the point back to bytes
     hw_ge_tobytes(r, pxy);
 
-    return 0;
+    return OP_OK;
 }
 
 /**
@@ -376,9 +379,11 @@ static int hw_ge_scalarmult(unsigned char *r, const unsigned char *B, const unsi
     reverse32(_a, a);
 
     // Load the public key
-    if (hw_ge_frombytes_vartime(aB, B) != 0)
+    const uint16_t status = hw_ge_frombytes_vartime(aB, B);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // multiply them together
@@ -387,7 +392,7 @@ static int hw_ge_scalarmult(unsigned char *r, const unsigned char *B, const unsi
     // compress the point back to bytes
     hw_ge_tobytes(r, aB);
 
-    return 0;
+    return OP_OK;
 }
 
 /**
@@ -398,12 +403,14 @@ static int hw_ge_scalarmult(unsigned char *r, const unsigned char *B, const unsi
  */
 static int hw_ge_mul8(unsigned char *r, const unsigned char *A)
 {
-    unsigned char Pxy[65];
+    unsigned char Pxy[SIG_STR_SIZE];
 
     // Load the point (public key)
-    if (hw_ge_frombytes_vartime(Pxy, A) != 0)
+    const uint16_t status = hw_ge_frombytes_vartime(Pxy, A);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // Add the point to itself x3
@@ -416,7 +423,7 @@ static int hw_ge_mul8(unsigned char *r, const unsigned char *A)
     // compress the point back to bytes
     hw_ge_tobytes(r, Pxy);
 
-    return 0;
+    return OP_OK;
 }
 
 #define MOD (unsigned char *)C_ED25519_FIELD, KEY_SIZE
@@ -449,7 +456,8 @@ static void hw_ge_fromfe_frombytes_vartime(unsigned char *ge, const unsigned cha
 
     unsigned char rZ[KEY_SIZE] = {0};
 
-    union {
+    union
+    {
         struct
         {
             unsigned char _uv7[KEY_SIZE];
@@ -457,7 +465,7 @@ static void hw_ge_fromfe_frombytes_vartime(unsigned char *ge, const unsigned cha
             unsigned char _v3[KEY_SIZE];
         };
 
-        unsigned char _Pxy[65];
+        unsigned char _Pxy[SIG_STR_SIZE];
     } uv;
 
     unsigned char sign;
@@ -538,6 +546,7 @@ static void hw_ge_fromfe_frombytes_vartime(unsigned char *ge, const unsigned cha
 
     goto setsign;
 
+    // clang-format off
     negative:
     {
         cx_math_multm(x, x, (unsigned char *)C_fe_sqrtm1, MOD);
@@ -581,6 +590,7 @@ static void hw_ge_fromfe_frombytes_vartime(unsigned char *ge, const unsigned cha
 
         hw_ge_tobytes(ge, uv._Pxy);
     }
+    // clang-format on
 }
 
 /**
@@ -591,9 +601,11 @@ static void hw_ge_fromfe_frombytes_vartime(unsigned char *ge, const unsigned cha
  */
 static int hw_hash_to_ec(unsigned char *ec, const unsigned char *A)
 {
-    if (hw_keccak(A, KEY_SIZE, ec) != 0)
+    const uint16_t status = hw_keccak(A, KEY_SIZE, ec);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     hw_ge_fromfe_frombytes_vartime(ec, ec);
@@ -619,21 +631,25 @@ static int hw_ge_double_scalarmult_base(
     unsigned char bG[KEY_SIZE];
 
     // multiply a * P
-    if (hw_ge_scalarmult(aP, P, a) != 0)
+    uint16_t status = hw_ge_scalarmult(aP, P, a);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // multiply b * G
     hw_ge_scalarmult_base(bG, b);
 
     // add the two points together
-    if (hw_ge_add(r, aP, bG) != 0)
+    status = hw_ge_add(r, aP, bG);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
-    return 0;
+    return OP_OK;
 }
 
 /**
@@ -656,50 +672,30 @@ static int hw_ge_double_scalarmult(
     unsigned char bP[KEY_SIZE];
 
     // multiply a * I
-    if (hw_ge_scalarmult(aI, I, a) != 0)
+    uint16_t status = hw_ge_scalarmult(aI, I, a);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // mutliply b * P
-    if (hw_ge_scalarmult(bP, P, b) != 0)
+    status = hw_ge_scalarmult(bP, P, b);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
     // add the two points together
-    if (hw_ge_add(r, aI, bP) != 0)
+    status = hw_ge_add(r, aI, bP);
+
+    if (status != OP_OK)
     {
-        return 1;
+        return status;
     }
 
-    return 0;
-}
-
-/**
- * Generates a key image such that
- * I = Hp(P)x
- * @param I the resulting key image
- * @param P the public key (public ephemeral)
- * @param x the private key (private ephemeral)
- */
-static int hw__generate_key_image(unsigned char *I, const unsigned char *P, const unsigned char *x)
-{
-    unsigned char HpP[KEY_SIZE] = {0};
-
-    // Hp(P)
-    if (hw_hash_to_ec(HpP, P) != 0)
-    {
-        return 1;
-    }
-
-    // I = Hp(P) * x
-    if (hw_ge_scalarmult(I, HpP, x) != 0)
-    {
-        return 1;
-    }
-
-    return 0;
+    return OP_OK;
 }
 
 /**
@@ -725,20 +721,22 @@ static int hw_hash_to_scalar(unsigned char *out, const unsigned char *in, size_t
     {
         TRY
         {
-            if (hw_keccak(in, length, hash) != 0)
+            const uint16_t status = hw_keccak(in, length, hash);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_KECCAK);
+                THROW(status);
             }
 
             hw_sc_reduce32(out, hash);
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -764,7 +762,7 @@ static void hw__complete_ring_signature(
         signatures + (real_output_index * SIG_SIZE) + KEY_SIZE, signatures + (real_output_index * SIG_SIZE), x, k);
 }
 
-static int hw__prepare_ring_signatures(
+static uint16_t hw__prepare_ring_signatures(
     unsigned char *signatures,
     unsigned char *k,
     const unsigned char *tx_prefix_hash,
@@ -814,15 +812,19 @@ static int hw__prepare_ring_signatures(
                     hw_ge_scalarmult_base(BL, k);
 
                     // Hp(P)
-                    if (hw_hash_to_ec(BR, PUBLIC_KEY) != 0)
+                    uint16_t status = hw_hash_to_ec(BR, PUBLIC_KEY);
+
+                    if (status != OP_OK)
                     {
-                        THROW(ERR_UNKNOWN_ERROR);
+                        THROW(status);
                     }
 
                     // R = k * Hp(P)
-                    if (hw_ge_scalarmult(BR, BR, k) != 0)
+                    status = hw_ge_scalarmult(BR, BR, k);
+
+                    if (status != OP_OK)
                     {
-                        THROW(ERR_UNKNOWN_ERROR);
+                        THROW(status);
                     }
                 }
                 else
@@ -838,21 +840,27 @@ static int hw__prepare_ring_signatures(
                     hw_random_scalar(R);
 
                     // L = (k1 * P) + (k2 * G)
-                    if (hw_ge_double_scalarmult_base(BL, L, PUBLIC_KEY, R) != 0)
+                    uint16_t status = hw_ge_double_scalarmult_base(BL, L, PUBLIC_KEY, R);
+
+                    if (status != OP_OK)
                     {
-                        THROW(ERR_UNKNOWN_ERROR);
+                        THROW(status);
                     }
 
                     // Hp(P)
-                    if (hw_hash_to_ec(BR, PUBLIC_KEY) != 0)
+                    status = hw_hash_to_ec(BR, PUBLIC_KEY);
+
+                    if (status != OP_OK)
                     {
-                        THROW(ERR_UNKNOWN_ERROR);
+                        THROW(status);
                     }
 
                     // R = (k1 * I) + (k2 * Hp(P))
-                    if (hw_ge_double_scalarmult(BR, R, BR, L, key_image) != 0)
+                    status = hw_ge_double_scalarmult(BR, R, BR, L, key_image);
+
+                    if (status != OP_OK)
                     {
-                        THROW(ERR_UNKNOWN_ERROR);
+                        THROW(status);
                     }
 
                     // add L to the current sum
@@ -869,9 +877,11 @@ static int hw__prepare_ring_signatures(
             unsigned char hash[32] = {0};
 
             // Hs(prefix + L's + R's)
-            if (hw_hash_to_scalar(hash, BUFFER, BUFFER_SIZE) != 0)
+            const uint16_t status = hw_hash_to_scalar(hash, BUFFER, BUFFER_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             // L'r = Hs(prefix + L's + R's) - sum
@@ -882,11 +892,11 @@ static int hw__prepare_ring_signatures(
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -899,46 +909,10 @@ static int hw__prepare_ring_signatures(
 }
 
 /**
- * Generates the ring signatures for a transaction
- * @param signatures the resulting ring signatures
- * @param tx_prefix_hash the transaction prefix hash
- * @param key_image the key image used for the input
- * @param public_keys the public keys for the input including mixins
- * @param private_ephemeral the private ephemeral of the input
- * @param real_output_index the index of the real output in the public_keys
- */
-static int hw__generate_ring_signatures(
-    unsigned char *signatures,
-    const unsigned char *tx_prefix_hash,
-    const unsigned char *key_image,
-    const unsigned char *public_keys,
-    const unsigned char *private_ephemeral,
-    const size_t real_output_index)
-{
-    unsigned char k[KEY_SIZE] = {0};
-
-    unsigned char x[KEY_SIZE] = {0};
-
-    // copy the private ephemeral
-    os_memmove(x, private_ephemeral, KEY_SIZE);
-
-    // prepare the ring signatures
-    if (hw__prepare_ring_signatures(signatures, k, tx_prefix_hash, key_image, public_keys, real_output_index) != 0)
-    {
-        return 1;
-    }
-
-    // complete the ring signatures
-    hw__complete_ring_signature(signatures, real_output_index, k, x);
-
-    return 0;
-}
-
-/**
  * END OF STATIC METHODS
  */
 
-int hw_check_signature(
+uint16_t hw_check_signature(
     const unsigned char *message_digest,
     const unsigned char *public_key,
     const unsigned char *signature)
@@ -956,34 +930,31 @@ int hw_check_signature(
 
             os_memmove(KEY, public_key, KEY_SIZE);
 
-            if (hw_ge_double_scalarmult_base(COMM, signature, public_key, signature + 32) != 0)
+            uint16_t status = hw_ge_double_scalarmult_base(COMM, signature, public_key, signature + 32);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
-            if (hw_hash_to_scalar(SCALAR, BUFFER, S_COMM_SIZE) != 0)
+            status = hw_hash_to_scalar(SCALAR, BUFFER, S_COMM_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             hw_sc_sub(SCALAR, SCALAR, signature);
 
             reverse32(SCALAR, SCALAR);
 
-            if (cx_math_is_zero(SCALAR, KEY_SIZE) != 0)
-            {
-                CLOSE_TRY;
-
-                return 1;
-            }
-
             CLOSE_TRY;
 
-            return 0;
+            return cx_math_is_zero(SCALAR, KEY_SIZE);
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -999,7 +970,7 @@ int hw_check_signature(
     END_TRY;
 }
 
-int hw_check_ring_signatures(
+uint16_t hw_check_ring_signatures(
     const unsigned char *tx_prefix_hash,
     const unsigned char *key_image,
     const unsigned char *public_keys,
@@ -1028,21 +999,27 @@ int hw_check_ring_signatures(
 #define L SIGNATURE
 #define R SIGNATURE + KEY_SIZE
                 // L = (k1 * P) + (k2 * G)
-                if (hw_ge_double_scalarmult_base(BL, L, PUBLIC_KEY, R) != 0)
+                uint16_t status = hw_ge_double_scalarmult_base(BL, L, PUBLIC_KEY, R);
+
+                if (status != OP_OK)
                 {
-                    THROW(ERR_UNKNOWN_ERROR);
+                    THROW(status);
                 }
 
                 // Hp(P)
-                if (hw_hash_to_ec(BR, PUBLIC_KEY) != 0)
+                status = hw_hash_to_ec(BR, PUBLIC_KEY);
+
+                if (status != OP_OK)
                 {
-                    THROW(ERR_UNKNOWN_ERROR);
+                    THROW(status);
                 }
 
                 // R = (k1 * I) + (k2 * Hp(P))
-                if (hw_ge_double_scalarmult(BR, R, BR, L, key_image) != 0)
+                status = hw_ge_double_scalarmult(BR, R, BR, L, key_image);
+
+                if (status != OP_OK)
                 {
-                    THROW(ERR_UNKNOWN_ERROR);
+                    THROW(status);
                 }
 
                 // add L to the current sum
@@ -1055,12 +1032,14 @@ int hw_check_ring_signatures(
 #undef BL
             }
 
-            unsigned char hash[32] = {0};
+            unsigned char hash[KEY_SIZE] = {0};
 
             // Hs(prefix + L's + R's)
-            if (hw_hash_to_scalar(hash, BUFFER, BUFFER_SIZE) != 0)
+            const uint16_t status = hw_hash_to_scalar(hash, BUFFER, BUFFER_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             // L'r = Hs(prefix + L's + R's) - sum
@@ -1074,7 +1053,8 @@ int hw_check_ring_signatures(
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            // this would be (false) to mere humans
+            return e;
         }
         FINALLY
         {
@@ -1085,7 +1065,7 @@ int hw_check_ring_signatures(
     END_TRY;
 }
 
-int hw_complete_ring_signature(
+uint16_t hw_complete_ring_signature(
     unsigned char *signature,
     const unsigned char *tx_public_key,
     const size_t output_index,
@@ -1104,15 +1084,19 @@ int hw_complete_ring_signature(
         TRY
         {
             // Generate the transaction key derivation D = (rA)
-            if (hw_generate_key_derivation(DERIVATION, tx_public_key, privateView) != 0)
+            uint16_t status = hw_generate_key_derivation(DERIVATION, tx_public_key, privateView);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_KEY_DERIVATION);
+                THROW(status);
             }
 
             // Generate the public ephemeral for the given output P = H(D || n)G + B
-            if (hw_derive_public_key(PUBLIC_EPHEMERAL, DERIVATION, output_index, publicSpend) != 0)
+            status = hw_derive_public_key(PUBLIC_EPHEMERAL, DERIVATION, output_index, publicSpend);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_PUBKEY);
+                THROW(status);
             }
 
             /**
@@ -1120,15 +1104,19 @@ int hw_complete_ring_signature(
              * processing is for an output that was actually sent to us, otherwise, we
              * will fail
              */
-            if (os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE) != 0)
+            status = os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_PUBKEY_MISMATCH);
+                THROW(status);
             }
 
             // Generate the private ephemeral for the given output x = H(D || N) + b
-            if (hw_derive_secret_key(PRIVATE_EPHEMERAL, DERIVATION, output_index, privateSpend) != 0)
+            status = hw_derive_secret_key(PRIVATE_EPHEMERAL, DERIVATION, output_index, privateSpend);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_SECKEY);
+                THROW(status);
             }
 
             // Complete the provided ring signature using the supplied k value and
@@ -1137,11 +1125,11 @@ int hw_complete_ring_signature(
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -1155,7 +1143,7 @@ int hw_complete_ring_signature(
     END_TRY;
 }
 
-int hw_derive_public_key(
+uint16_t hw_derive_public_key(
     unsigned char *key,
     const unsigned char *derivation,
     const size_t output_index,
@@ -1167,9 +1155,11 @@ int hw_derive_public_key(
     {
         TRY
         {
-            if (hw_derivation_to_scalar(temp, derivation, output_index) != 0)
+            const uint16_t status = hw_derivation_to_scalar(temp, derivation, output_index);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             hw_ge_scalarmult_base(temp, temp);
@@ -1180,7 +1170,7 @@ int hw_derive_public_key(
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         };
         FINALLY
         {
@@ -1190,7 +1180,7 @@ int hw_derive_public_key(
     END_TRY;
 }
 
-int hw_derive_secret_key(
+uint16_t hw_derive_secret_key(
     unsigned char *key,
     const unsigned char *derivation,
     const size_t output_index,
@@ -1202,20 +1192,22 @@ int hw_derive_secret_key(
     {
         TRY
         {
-            if (hw_derivation_to_scalar(temp, derivation, output_index) != 0)
+            const uint16_t status = hw_derivation_to_scalar(temp, derivation, output_index);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             hw_sc_add(key, temp, privateSpend);
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         };
         FINALLY
         {
@@ -1225,7 +1217,7 @@ int hw_derive_secret_key(
     END_TRY;
 }
 
-int hw_generate_keypair(unsigned char *public, unsigned char *private)
+uint16_t hw_generate_keypair(unsigned char *public, unsigned char *private)
 {
     BEGIN_TRY
     {
@@ -1237,18 +1229,18 @@ int hw_generate_keypair(unsigned char *public, unsigned char *private)
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY {}
     }
     END_TRY;
 }
 
-int hw_generate_ring_signatures(
+uint16_t hw_generate_ring_signatures(
     unsigned char *signatures,
     const unsigned char *tx_public_key,
     const size_t output_index,
@@ -1276,15 +1268,19 @@ int hw_generate_ring_signatures(
         TRY
         {
             // Generate the transaction key derivation D = (rA)
-            if (hw_generate_key_derivation(DERIVATION, tx_public_key, privateView) != 0)
+            uint16_t status = hw_generate_key_derivation(DERIVATION, tx_public_key, privateView);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_KEY_DERIVATION);
+                THROW(status);
             }
 
             // Generate the public ephemeral for the given output P = H(D || n)G + B
-            if (hw_derive_public_key(PUBLIC_EPHEMERAL, DERIVATION, output_index, publicSpend) != 0)
+            status = hw_derive_public_key(PUBLIC_EPHEMERAL, DERIVATION, output_index, publicSpend);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_PUBKEY);
+                THROW(status);
             }
 
             /**
@@ -1292,39 +1288,46 @@ int hw_generate_ring_signatures(
              * processing is for an output that was actually sent to us, otherwise, we
              * will fail
              */
-            if (os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE) != 0)
+            status = os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_PUBKEY_MISMATCH);
+                THROW(status);
             }
 
             // Generate the private ephemeral for the given output x = H(D || N) + b
-            if (hw_derive_secret_key(PRIVATE_EPHEMERAL, DERIVATION, output_index, privateSpend) != 0)
+            status = hw_derive_secret_key(PRIVATE_EPHEMERAL, DERIVATION, output_index, privateSpend);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_SECKEY);
+                THROW(status);
             }
 
             // generate the key image and store it in the derivation to reduce memory
             // use
-            if (hw__generate_key_image(DERIVATION, PUBLIC_EPHEMERAL, PRIVATE_EPHEMERAL) != 0)
+            status = hw__generate_key_image(DERIVATION, PUBLIC_EPHEMERAL, PRIVATE_EPHEMERAL);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_GENERATE_KEY_IMAGE);
+                THROW(status);
             }
 
             // generate the ring signatures
-            if (hw__generate_ring_signatures(
-                    signatures, tx_prefix_hash, DERIVATION, public_keys, PRIVATE_EPHEMERAL, real_output_index)
-                != 0)
+            status = hw__generate_ring_signatures(
+                signatures, tx_prefix_hash, DERIVATION, public_keys, PRIVATE_EPHEMERAL, real_output_index);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_GENERATE_RING_SIGS);
+                THROW(status);
             }
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -1339,15 +1342,18 @@ int hw_generate_ring_signatures(
     END_TRY;
 }
 
-int hw_generate_key_derivation(unsigned char *derivation, const unsigned char *public, const unsigned char *private)
+uint16_t
+    hw_generate_key_derivation(unsigned char *derivation, const unsigned char *public, const unsigned char *private)
 {
     BEGIN_TRY
     {
         TRY
         {
-            if (hw_ge_scalarmult(derivation, public, private) != 0)
+            const uint16_t status = hw_ge_scalarmult(derivation, public, private);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             CLOSE_TRY;
@@ -1356,14 +1362,14 @@ int hw_generate_key_derivation(unsigned char *derivation, const unsigned char *p
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY {}
     }
     END_TRY;
 }
 
-int hw_generate_key_image(
+uint16_t hw_generate_key_image(
     unsigned char *key_image,
     const unsigned char *tx_public_key,
     const size_t output_index,
@@ -1380,15 +1386,19 @@ int hw_generate_key_image(
         TRY
         {
             // Generate the transaction key derivation D = (rA)
-            if (hw_generate_key_derivation(DERIVATION, tx_public_key, privateView) != 0)
+            uint16_t status = hw_generate_key_derivation(DERIVATION, tx_public_key, privateView);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_KEY_DERIVATION);
+                THROW(status);
             }
 
             // Generate the public ephemeral for the given output P = H(D || n)G + B
-            if (hw_derive_public_key(PUBLIC_EPHEMERAL, DERIVATION, output_index, publicSpend) != 0)
+            status = hw_derive_public_key(PUBLIC_EPHEMERAL, DERIVATION, output_index, publicSpend);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_PUBKEY);
+                THROW(status);
             }
 
             /**
@@ -1396,15 +1406,19 @@ int hw_generate_key_image(
              * processing is for an output that was actually sent to us, otherwise, we
              * will fail
              */
-            if (os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE) != 0)
+            status = os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_PUBKEY_MISMATCH);
+                THROW(status);
             }
 
             // Generate the private ephemeral for the given output x = H(D || N) + b
-            if (hw_derive_secret_key(PRIVATE_EPHEMERAL, DERIVATION, output_index, privateSpend) != 0)
+            status = hw_derive_secret_key(PRIVATE_EPHEMERAL, DERIVATION, output_index, privateSpend);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_DERIVE_SECKEY);
+                THROW(status);
             }
 
             CLOSE_TRY;
@@ -1414,7 +1428,7 @@ int hw_generate_key_image(
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -1428,12 +1442,12 @@ int hw_generate_key_image(
     END_TRY;
 }
 
-int hw_generate_private_view_key(unsigned char *privateView, const unsigned char *privateSpend)
+uint16_t hw_generate_private_view_key(unsigned char *privateView, const unsigned char *privateSpend)
 {
     return hw_hash_to_scalar(privateView, privateSpend, KEY_SIZE);
 }
 
-int hw_generate_signature(
+uint16_t hw_generate_signature(
     unsigned char *signature,
     const unsigned char *message_digest,
     const unsigned char *public_key,
@@ -1456,20 +1470,22 @@ int hw_generate_signature(
 
             hw_ge_scalarmult_base(COMM, K);
 
-            if (hw_hash_to_scalar(signature, BUFFER, S_COMM_SIZE) != 0)
+            const uint16_t status = hw_hash_to_scalar(signature, BUFFER, S_COMM_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             hw_sc_mulsub(signature + KEY_SIZE, signature, private_key, K);
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -1486,7 +1502,7 @@ int hw_generate_signature(
 }
 
 // cn_fast_hash
-int hw_keccak(const unsigned char *in, size_t length, unsigned char *out)
+uint16_t hw_keccak(const unsigned char *in, size_t length, unsigned char *out)
 {
     BEGIN_TRY
     {
@@ -1500,18 +1516,18 @@ int hw_keccak(const unsigned char *in, size_t length, unsigned char *out)
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return ERR_KECCAK;
         }
         FINALLY {}
     }
     END_TRY;
 }
 
-int hw_private_key_to_public_key(unsigned char *public, const unsigned char *private)
+uint16_t hw_private_key_to_public_key(unsigned char *public, const unsigned char *private)
 {
     BEGIN_TRY
     {
@@ -1521,18 +1537,18 @@ int hw_private_key_to_public_key(unsigned char *public, const unsigned char *pri
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return ERR_PRIVATE_TO_PUBLIC;
         }
         FINALLY {}
     }
     END_TRY;
 }
 
-int hw_retrieve_private_spend_key(unsigned char *private)
+uint16_t hw_retrieve_private_spend_key(unsigned char *private)
 {
     BEGIN_TRY
     {
@@ -1549,9 +1565,11 @@ int hw_retrieve_private_spend_key(unsigned char *private)
             os_perso_derive_node_bip32(CX_CURVE_Ed25519, bip32Path, BIP32_PATH, SEED, CHAIN);
 
             // Hash that seed
-            if (hw_keccak(SEED, KEY_SIZE, KEY) != 0)
+            const uint16_t status = hw_keccak(SEED, KEY_SIZE, KEY);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_KECCAK);
+                THROW(status);
             }
 
             // Reduce the hash to a scalar
@@ -1559,11 +1577,11 @@ int hw_retrieve_private_spend_key(unsigned char *private)
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY
         {
@@ -1577,35 +1595,39 @@ int hw_retrieve_private_spend_key(unsigned char *private)
     END_TRY;
 }
 
-int hw_check_key(const unsigned char *key)
+uint16_t hw_check_key(const unsigned char *key)
 {
     BEGIN_TRY
     {
         TRY
         {
             /**
-             * The most common missue of keys is dropping a public in a private spot
+             * The most common misuse of keys is dropping a public in a private spot
              * or a private in a public spot. This simply checks to make sure that we
              * did not drop a scalar in where we expected a public key as a public key
              * is never a scalar :)
              */
-            if (hw_check_scalar(key) != 0)
+            const uint16_t status = hw_check_scalar(key);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             CLOSE_TRY;
 
-            return 1;
+            return OP_NOK;
         }
-        CATCH_OTHER(e) {
-            return 0;
+        CATCH_OTHER(e)
+        {
+            return OP_OK;
         }
-        FINALLY{}
-    } END_TRY;
+        FINALLY {}
+    }
+    END_TRY;
 }
 
-int hw_check_scalar(const unsigned char *scalar)
+uint16_t hw_check_scalar(const unsigned char *scalar)
 {
     unsigned char reduced[KEY_SIZE] = {0};
 
@@ -1615,21 +1637,94 @@ int hw_check_scalar(const unsigned char *scalar)
         {
             hw_sc_reduce32(reduced, scalar);
 
-            if (os_memcmp(reduced, scalar, KEY_SIZE) != 0)
+            const uint16_t status = os_memcmp(reduced, scalar, KEY_SIZE);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_UNKNOWN_ERROR);
+                THROW(status);
             }
 
             CLOSE_TRY;
 
-            return 1;
+            return OP_NOK;
         }
         CATCH_OTHER(e)
         {
-            return 0;
+            return OP_OK;
         }
-        FINALLY {
+        FINALLY
+        {
             explicit_bzero(reduced, KEY_SIZE);
         }
-    } END_TRY;
+    }
+    END_TRY;
+}
+
+/**
+ * Generates a key image such that
+ * I = Hp(P)x
+ * @param I the resulting key image
+ * @param P the public key (public ephemeral)
+ * @param x the private key (private ephemeral)
+ */
+uint16_t hw__generate_key_image(unsigned char *I, const unsigned char *P, const unsigned char *x)
+{
+    unsigned char HpP[KEY_SIZE] = {0};
+
+    // Hp(P)
+    uint16_t status = hw_hash_to_ec(HpP, P);
+
+    if (status != OP_OK)
+    {
+        return status;
+    }
+
+    // I = Hp(P) * x
+    status = hw_ge_scalarmult(I, HpP, x);
+
+    if (status != OP_OK)
+    {
+        return status;
+    }
+
+    return OP_OK;
+}
+
+/**
+ * Generates the ring signatures for a transaction
+ * @param signatures the resulting ring signatures
+ * @param tx_prefix_hash the transaction prefix hash
+ * @param key_image the key image used for the input
+ * @param public_keys the public keys for the input including mixins
+ * @param private_ephemeral the private ephemeral of the input
+ * @param real_output_index the index of the real output in the public_keys
+ */
+uint16_t hw__generate_ring_signatures(
+    unsigned char *signatures,
+    const unsigned char *tx_prefix_hash,
+    const unsigned char *key_image,
+    const unsigned char *public_keys,
+    const unsigned char *private_ephemeral,
+    const size_t real_output_index)
+{
+    unsigned char k[KEY_SIZE] = {0};
+
+    unsigned char x[KEY_SIZE] = {0};
+
+    // copy the private ephemeral
+    os_memmove(x, private_ephemeral, KEY_SIZE);
+
+    // prepare the ring signatures
+    uint16_t status =
+        hw__prepare_ring_signatures(signatures, k, tx_prefix_hash, key_image, public_keys, real_output_index);
+
+    if (status != OP_OK)
+    {
+        return status;
+    }
+
+    // complete the ring signatures
+    hw__complete_ring_signature(signatures, real_output_index, k, x);
+
+    return OP_OK;
 }

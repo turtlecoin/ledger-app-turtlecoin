@@ -57,9 +57,15 @@ typedef enum rlpTxType
 
 unsigned int ui_prepro(const bagl_element_t *element);
 
+uint64_t readUint64BE(uint8_t *buffer);
+
 uint32_t readUint32BE(uint8_t *buffer);
 
 uint16_t readUint16BE(uint8_t *buffer);
+
+uint8_t readUint8(uint8_t *buffer);
+
+void uint16ToChar(unsigned char *r, const uint16_t value);
 
 void sendResponse(size_t tx, bool approve);
 
@@ -68,6 +74,8 @@ void sendError(const uint16_t errCode);
 void do_deny();
 
 void toHexString(const unsigned char *in, const unsigned int in_len, unsigned char *out, const unsigned int out_len);
+
+unsigned int amountToString(unsigned char *out, uint64_t value, const unsigned int max_length);
 
 size_t write_io(const unsigned char *output, const unsigned char *name, bool hexData);
 

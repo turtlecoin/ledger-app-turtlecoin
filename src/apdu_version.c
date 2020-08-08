@@ -15,7 +15,6 @@
  *****************************************************************************/
 
 #include <apdu_version.h>
-
 #include <utils.h>
 
 void handle_version()

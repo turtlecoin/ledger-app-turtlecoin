@@ -14,19 +14,18 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#ifndef APDU_CHECK_KEY_H
-#define APDU_CHECK_KEY_H
+#include "apdu_tx_state.h"
 
-#include <stdint.h>
+#include <transaction.h>
+#include <utils.h>
 
-#define APDU_CHECK_KEY_NAME ((unsigned char *)"CHECKKEY")
+void handle_tx_state()
+{
+    unsigned char state = tx_state();
 
-void handle_check_key(
-    uint8_t p1,
-    uint8_t p2,
-    uint8_t *dataBuffer,
-    uint16_t dataLength,
-    volatile unsigned int *flags,
-    volatile unsigned int *tx);
-
-#endif // APDU_CHECK_KEY_H
+    /**
+     * This is static non-privileged information and as thus
+     * can be returned without any additional checking
+     */
+    sendResponse(write_io_hybrid(&state, 1, APDU_TX_STATE_NAME, true), true);
+}

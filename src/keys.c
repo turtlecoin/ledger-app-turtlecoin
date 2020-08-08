@@ -28,7 +28,7 @@ const wallet_t N_state_pic;
 wallet_t N_state_pic;
 #endif
 
-int reset_keys()
+uint16_t reset_keys()
 {
     BEGIN_TRY
     {
@@ -40,22 +40,27 @@ int reset_keys()
             nvm_write((void *)N_turtlecoin_wallet, NULL, sizeof(wallet_t));
 
             // Then reinitialize the keys
-            init_keys();
+            uint16_t status = init_keys();
+
+            if (status != OP_OK)
+            {
+                THROW(status);
+            }
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY {}
     }
     END_TRY;
 }
 
-int init_keys()
+uint16_t init_keys()
 {
     /**
      * Check to see if our wallet information already exists in the secure NVRAM
@@ -111,11 +116,11 @@ int init_keys()
 
                 CLOSE_TRY;
 
-                return 0;
+                return OP_OK;
             }
             CATCH_OTHER(e)
             {
-                return 1;
+                return e;
             }
             FINALLY
             {
@@ -131,13 +136,14 @@ int init_keys()
     }
 }
 
-int generate_public_address(const unsigned char *publicSpend, const unsigned char *publicView, unsigned char *address)
+uint16_t
+    generate_public_address(const unsigned char *publicSpend, const unsigned char *publicView, unsigned char *address)
 {
     BEGIN_TRY
     {
         TRY
         {
-            unsigned char buffer[68] = {0};
+            unsigned char buffer[RAW_ADDRESS_SIZE] = {0};
 
             unsigned char hash[KEY_SIZE] = {0};
 
@@ -162,15 +168,20 @@ int generate_public_address(const unsigned char *publicSpend, const unsigned cha
             os_memmove(buffer + pos, hash, CHECKSUM_SIZE);
 
             // Encode the buffer as Base58
-            base58_encode(buffer, address);
+            const uint16_t status = base58_encode(buffer, address);
+
+            if (status != OP_OK)
+            {
+                THROW(status);
+            }
 
             CLOSE_TRY;
 
-            return 0;
+            return OP_OK;
         }
         CATCH_OTHER(e)
         {
-            return 1;
+            return e;
         }
         FINALLY {}
     }

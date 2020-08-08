@@ -18,6 +18,8 @@
 
 #include "menu.h"
 
+#include <transaction.h>
+
 static void app_kill(void)
 {
     BEGIN_TRY_L(exit)
@@ -33,7 +35,12 @@ static void app_kill(void)
 
 static void init_boot()
 {
-    if (init_keys() != 0)
+    if (init_keys() != OP_OK)
+    {
+        app_kill();
+    }
+
+    if (init_tx() != OP_OK)
     {
         app_kill();
     }

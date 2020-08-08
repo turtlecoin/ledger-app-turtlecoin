@@ -17,6 +17,7 @@
 #include "apdu_generate_signature.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_GS_SIZE KEY_SIZE
@@ -30,14 +31,15 @@ static void do_generate_signature()
     {
         TRY
         {
-            if (hw_generate_signature(
-                    APDU_GS_SIGNATURE,
-                    APDU_GS_MESSAGE_DIGEST,
-                    N_turtlecoin_wallet->spend.public,
-                    N_turtlecoin_wallet->spend.private)
-                != 0)
+            const uint16_t status = hw_generate_signature(
+                APDU_GS_SIGNATURE,
+                APDU_GS_MESSAGE_DIGEST,
+                N_turtlecoin_wallet->spend.public,
+                N_turtlecoin_wallet->spend.private);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_GENERATE_SIGNATURE);
+                THROW(status);
             }
 
             CLOSE_TRY;
@@ -46,7 +48,7 @@ static void do_generate_signature()
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -94,7 +96,11 @@ void handle_generate_signature(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_GS_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_GS_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

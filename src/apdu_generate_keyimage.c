@@ -17,6 +17,7 @@
 #include "apdu_generate_keyimage.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_GKI_SIZE KEY_SIZE + sizeof(uint32_t) + KEY_SIZE
@@ -34,17 +35,18 @@ static void do_generate_key_image(const size_t approve_all_this_session)
         TRY
         {
             // Try to generate the key image
-            if (hw_generate_key_image(
-                    APDU_GKI_KEY_IMAGE,
-                    APDU_GKI_TX_PUBLIC_KEY,
-                    APDU_GKI_OUTPUT_INDEX,
-                    APDU_GKI_OUTPUT_KEY,
-                    N_turtlecoin_wallet->view.private,
-                    N_turtlecoin_wallet->spend.private,
-                    N_turtlecoin_wallet->spend.public)
-                != 0)
+            const uint16_t status = hw_generate_key_image(
+                APDU_GKI_KEY_IMAGE,
+                APDU_GKI_TX_PUBLIC_KEY,
+                APDU_GKI_OUTPUT_INDEX,
+                APDU_GKI_OUTPUT_KEY,
+                N_turtlecoin_wallet->view.private,
+                N_turtlecoin_wallet->spend.private,
+                N_turtlecoin_wallet->spend.public);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_GENERATE_KEY_IMAGE);
+                THROW(status);
             }
 
             pre_approved = approve_all_this_session;
@@ -55,7 +57,7 @@ static void do_generate_key_image(const size_t approve_all_this_session)
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -87,7 +89,9 @@ UX_FLOW(ux_display_generate_keyimage_auto_flow, &ux_display_generate_keyimage_au
 
 UX_STEP_NOCB(ux_display_generate_keyimage_flow_1_step, pnn, {&C_icon_turtlecoin, " Generate ", "Key Image?"});
 
-UX_STEP_NOCB(ux_display_generate_keyimage_flow_2_step, bnnn_paging,
+UX_STEP_NOCB(
+    ux_display_generate_keyimage_flow_2_step,
+    bnnn_paging,
     {.title = "Output Key", .text = (char *)DISPLAY_KEY_HEX});
 
 UX_STEP_VALID(
@@ -122,7 +126,11 @@ void handle_generate_keyimage(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_GKI_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_GKI_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

@@ -93,22 +93,22 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx)
 
                 case APDU_CHECK_KEY:
                     handle_check_key(
-                            G_io_apdu_buffer[OFFSET_P1],
-                            G_io_apdu_buffer[OFFSET_P2],
-                            G_io_apdu_buffer + OFFSET_CDATA,
-                            data_length,
-                            flags,
-                            tx);
+                        G_io_apdu_buffer[OFFSET_P1],
+                        G_io_apdu_buffer[OFFSET_P2],
+                        G_io_apdu_buffer + OFFSET_CDATA,
+                        data_length,
+                        flags,
+                        tx);
                     break;
 
                 case APDU_CHECK_SCALAR:
                     handle_check_scalar(
-                            G_io_apdu_buffer[OFFSET_P1],
-                            G_io_apdu_buffer[OFFSET_P2],
-                            G_io_apdu_buffer + OFFSET_CDATA,
-                            data_length,
-                            flags,
-                            tx);
+                        G_io_apdu_buffer[OFFSET_P1],
+                        G_io_apdu_buffer[OFFSET_P2],
+                        G_io_apdu_buffer + OFFSET_CDATA,
+                        data_length,
+                        flags,
+                        tx);
                     break;
 
                 case APDU_ADDRESS:
@@ -203,6 +203,70 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx)
                         data_length,
                         flags,
                         tx);
+                    break;
+
+                case APDU_TX_STATE:
+                    handle_tx_state();
+                    break;
+
+                case APDU_TX_START:
+                    handle_tx_start(
+                        G_io_apdu_buffer[OFFSET_P1],
+                        G_io_apdu_buffer[OFFSET_P2],
+                        G_io_apdu_buffer + OFFSET_CDATA,
+                        data_length,
+                        flags,
+                        tx);
+                    break;
+
+                case APDU_TX_START_INPUT_LOAD:
+                    handle_tx_start_input_load(flags);
+                    break;
+
+                case APDU_TX_LOAD_INPUT:
+                    handle_tx_input_load(
+                        G_io_apdu_buffer[OFFSET_P1],
+                        G_io_apdu_buffer[OFFSET_P2],
+                        G_io_apdu_buffer + OFFSET_CDATA,
+                        data_length,
+                        flags,
+                        tx);
+                    break;
+
+                case APDU_TX_START_OUTPUT_LOAD:
+                    handle_tx_start_output_load(flags);
+                    break;
+
+                case APDU_TX_LOAD_OUTPUT:
+                    handle_tx_output_load(
+                        G_io_apdu_buffer[OFFSET_P1],
+                        G_io_apdu_buffer[OFFSET_P2],
+                        G_io_apdu_buffer + OFFSET_CDATA,
+                        data_length,
+                        flags,
+                        tx);
+                    break;
+
+                case APDU_TX_FINALIZE_PREFIX:
+                    handle_tx_finalize_prefix(flags);
+                    break;
+
+                case APDU_TX_SIGN:
+                    handle_tx_sign(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], flags, tx);
+                    break;
+
+                case APDU_TX_DUMP:
+                    handle_tx_dump(
+                        G_io_apdu_buffer[OFFSET_P1],
+                        G_io_apdu_buffer[OFFSET_P2],
+                        G_io_apdu_buffer + OFFSET_CDATA,
+                        data_length,
+                        flags,
+                        tx);
+                    break;
+
+                case APDU_TX_RESET:
+                    handle_tx_reset(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], flags, tx);
                     break;
 
                 case APDU_RESET_KEYS:

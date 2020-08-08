@@ -5,6 +5,7 @@
 import Transport, { Observer, Subscription } from '@ledgerhq/hw-transport';
 import { Reader, Writer } from 'bytestream-helper';
 import { Socket, createConnection } from 'net';
+import { AbortController } from 'abort-controller/dist/abort-controller';
 
 export class TCPTransport extends Transport<string> {
     private readonly m_socket: Socket;
@@ -12,7 +13,7 @@ export class TCPTransport extends Transport<string> {
     private m_verbose = false;
     private m_scrambleKey?: string;
 
-    constructor (socket: Socket, timeout = 5000) {
+    constructor (socket: Socket, timeout = 30000) {
         super();
 
         this.m_socket = socket;
@@ -54,7 +55,7 @@ export class TCPTransport extends Transport<string> {
         };
     }
 
-    public static async open (host: string, timeout = 5000): Promise<TCPTransport> {
+    public static async open (host: string, timeout = 30000): Promise<TCPTransport> {
         return new Promise((resolve, reject) => {
             const [ip, port] = host.split(':', 2);
 
@@ -86,6 +87,14 @@ export class TCPTransport extends Transport<string> {
 
     public async exchange (apdu: Buffer): Promise<Buffer> {
         return new Promise((resolve, reject) => {
+            const controller = new AbortController();
+
+            controller.signal.addEventListener('abort', () => {
+                return reject(new Error('exchange process timed out'));
+            });
+
+            const timeout = setTimeout(() => controller.abort(), this.m_timeout);
+
             const writer = new Writer();
 
             writer.uint32_t(apdu.length, true);
@@ -108,6 +117,8 @@ export class TCPTransport extends Transport<string> {
 
                 const code = reader.uint16_t(true).toJSNumber();
                 if (code === 0x9000) {
+                    clearTimeout(timeout);
+
                     return resolve(response);
                 } else if ((code & 0xff00) !== 0x6100) {
                     return reject(new Error('Invalid status code supplied'));

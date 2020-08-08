@@ -14,23 +14,43 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include "apdu_private_to_public.h"
+#include "apdu_tx_start.h"
 
-#include <keys.h>
 #include <transaction.h>
 #include <utils.h>
 
-#define APDU_PTP_SIZE KEY_SIZE
-#define APDU_PTP_PRIVATE_KEY WORKING_SET
-#define APDU_PTP_PUBLIC_KEY APDU_PTP_PRIVATE_KEY + KEY_SIZE
+#define APDU_TX_START_SIZE sizeof(uint64_t) + sizeof(uint8_t) + sizeof(uint8_t) + KEY_SIZE + sizeof(uint8_t)
+#define APDU_TX_START_ALT_SIZE APDU_TX_START_SIZE + KEY_SIZE
 
-static void do_private_to_public()
+#define APDU_TS_UNLOCK_IDX WORKING_SET
+#define APDU_TS_UNLOCK readUint64BE(APDU_TS_UNLOCK_IDX)
+
+#define APDU_TS_INPUT_COUNT_IDX APDU_TS_UNLOCK_IDX + sizeof(uint64_t)
+#define APDU_TS_INPUT_COUNT readUint8(APDU_TS_INPUT_COUNT_IDX)
+
+#define APDU_TS_OUTPUT_COUNT_IDX APDU_TS_INPUT_COUNT_IDX + sizeof(uint8_t)
+#define APDU_TS_OUTPUT_COUNT readUint8(APDU_TS_OUTPUT_COUNT_IDX)
+
+#define APDU_TS_TX_PUBLIC_KEY APDU_TS_OUTPUT_COUNT_IDX + sizeof(uint8_t)
+
+#define APDU_TS_HAS_PAYMENT_ID_IDX APDU_TS_TX_PUBLIC_KEY + KEY_SIZE
+#define APDU_TS_HAS_PAYMENT_ID readUint8(APDU_TS_HAS_PAYMENT_ID_IDX)
+
+#define APDU_TS_PAYMENT_ID APDU_TS_HAS_PAYMENT_ID_IDX + sizeof(uint8_t)
+
+static void do_tx_start()
 {
     BEGIN_TRY
     {
         TRY
         {
-            const uint16_t status = hw_private_key_to_public_key(APDU_PTP_PUBLIC_KEY, APDU_PTP_PRIVATE_KEY);
+            const uint16_t status = tx_start(
+                APDU_TS_UNLOCK,
+                APDU_TS_INPUT_COUNT,
+                APDU_TS_OUTPUT_COUNT,
+                APDU_TS_TX_PUBLIC_KEY,
+                APDU_TS_HAS_PAYMENT_ID,
+                APDU_TS_PAYMENT_ID);
 
             if (status != OP_OK)
             {
@@ -39,26 +59,22 @@ static void do_private_to_public()
 
             CLOSE_TRY;
 
-            sendResponse(write_io_hybrid(APDU_PTP_PUBLIC_KEY, KEY_SIZE, APDU_PRIVATE_TO_PUBLIC_NAME, true), true);
+            sendResponse(0, true);
         }
         CATCH_OTHER(e)
         {
             sendError(e);
         }
-        FINALLY
-        {
-            // Explicitly clear the working memory
-            explicit_bzero(WORKING_SET, WORKING_SET_SIZE);
-        };
+        FINALLY {}
     }
     END_TRY;
 }
 
-UX_STEP_SPLASH(ux_private_to_public_1_step, pnn, do_private_to_public(), {&C_icon_turtlecoin, "Checking", "Signature"});
+UX_STEP_SPLASH(ux_tx_start_1_step, pnn, do_tx_start(), {&C_icon_turtlecoin, "Starting", "Transaction..."});
 
-UX_FLOW(ux_private_to_public_flow, &ux_private_to_public_1_step);
+UX_FLOW(ux_tx_start_flow, &ux_tx_start_1_step);
 
-void handle_private_to_public(
+void handle_tx_start(
     uint8_t p1,
     uint8_t p2,
     uint8_t *dataBuffer,
@@ -72,7 +88,7 @@ void handle_private_to_public(
     {
         return sendError(ERR_TRANSACTION_STATE);
     }
-    else if (dataLength != APDU_PTP_SIZE)
+    else if (dataLength != APDU_TX_START_SIZE && dataLength != APDU_TX_START_ALT_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }
@@ -80,7 +96,7 @@ void handle_private_to_public(
     // copy the data buffer into the working set
     os_memmove(WORKING_SET, dataBuffer, dataLength);
 
-    ux_flow_init(0, ux_private_to_public_flow, NULL);
+    ux_flow_init(0, ux_tx_start_flow, NULL);
 
     *flags |= IO_ASYNCH_REPLY;
 }

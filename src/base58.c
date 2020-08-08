@@ -78,24 +78,36 @@ static void encode_block(const unsigned char *block, size_t size, unsigned char 
     }
 }
 
-int base58_encode(const unsigned char *rawAddress, unsigned char *str_b58)
+uint16_t base58_encode(const unsigned char *rawAddress, unsigned char *str_b58)
 {
-    unsigned int full_block_count = RAW_ADDRESS_SIZE / FULL_BLOCK_SIZE;
-
-    unsigned int last_block_size = RAW_ADDRESS_SIZE % FULL_BLOCK_SIZE;
-
-    for (size_t i = 0; i < full_block_count; ++i)
+    BEGIN_TRY
     {
-        encode_block(rawAddress + i * FULL_BLOCK_SIZE, FULL_BLOCK_SIZE, &str_b58[i * FULL_ENCODED_BLOCK_SIZE]);
-    }
+        TRY
+        {
+            unsigned int full_block_count = RAW_ADDRESS_SIZE / FULL_BLOCK_SIZE;
 
-    if (0 < last_block_size)
-    {
-        encode_block(
-            rawAddress + full_block_count * FULL_BLOCK_SIZE,
-            last_block_size,
-            &str_b58[full_block_count * FULL_ENCODED_BLOCK_SIZE]);
-    }
+            unsigned int last_block_size = RAW_ADDRESS_SIZE % FULL_BLOCK_SIZE;
 
-    return 0;
+            for (size_t i = 0; i < full_block_count; ++i)
+            {
+                encode_block(rawAddress + i * FULL_BLOCK_SIZE, FULL_BLOCK_SIZE, &str_b58[i * FULL_ENCODED_BLOCK_SIZE]);
+            }
+
+            if (0 < last_block_size)
+            {
+                encode_block(
+                    rawAddress + full_block_count * FULL_BLOCK_SIZE,
+                    last_block_size,
+                    &str_b58[full_block_count * FULL_ENCODED_BLOCK_SIZE]);
+            }
+
+            return OP_OK;
+        }
+        CATCH_OTHER(e)
+        {
+            THROW(ERR_BASE58);
+        }
+        FINALLY {};
+    }
+    END_TRY;
 }

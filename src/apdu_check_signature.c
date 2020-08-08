@@ -17,6 +17,7 @@
 #include "apdu_check_signature.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_CS_SIZE KEY_SIZE + KEY_SIZE + SIG_SIZE
@@ -36,7 +37,7 @@ static void do_check_signature()
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(ERR_CHECK_SIGNATURE);
         }
         FINALLY
         {
@@ -61,7 +62,11 @@ void handle_check_signature(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_CS_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_CS_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }

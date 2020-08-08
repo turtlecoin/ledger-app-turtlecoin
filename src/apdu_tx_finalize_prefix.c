@@ -14,62 +14,53 @@
  *  limitations under the License.
  *****************************************************************************/
 
-#include "apdu_random_key_pair.h"
+#include "apdu_tx_finalize_prefix.h"
 
-#include <keys.h>
 #include <transaction.h>
 #include <utils.h>
 
-static void do_generate_random_key_pair()
+static void do_tx_finalize_prefix()
 {
-    unsigned char combined[64] = {0};
-
     BEGIN_TRY
     {
         TRY
         {
-            const uint16_t status = hw_generate_keypair(combined, combined + KEY_SIZE);
+            const int status = tx_finalize_prefix();
 
             if (status != OP_OK)
             {
                 THROW(status);
             }
 
-            /**
-             * This is static non-privileged information and as thus
-             * can be returned without any additional checking
-             */
-            sendResponse(write_io_hybrid(combined, sizeof(combined), APDU_RANDOM_KEY_PAIR_NAME, true), true);
+            CLOSE_TRY;
+
+            sendResponse(0, true);
         }
         CATCH_OTHER(e)
         {
             sendError(e);
         }
-        FINALLY
-        {
-            // Explicitly clear the working memory
-            explicit_bzero(combined, sizeof(combined));
-        }
+        FINALLY {}
     }
     END_TRY;
 }
 
 UX_STEP_SPLASH(
-    ux_generate_random_key_pair_flow_1_step,
+    ux_tx_finalize_prefix_1_step,
     pnn,
-    do_generate_random_key_pair(),
-    {&C_icon_turtlecoin, "Generating", "Random Keys..."});
+    do_tx_finalize_prefix(),
+    {&C_icon_turtlecoin, "Finalizing", "Tx Prefix..."});
 
-UX_FLOW(ux_generate_random_key_pair_flow, &ux_generate_random_key_pair_flow_1_step);
+UX_FLOW(ux_tx_finalize_prefix_flow, &ux_tx_finalize_prefix_1_step);
 
-void handle_generate_random_key_pair(volatile unsigned int *flags)
+void handle_tx_finalize_prefix(volatile unsigned int *flags)
 {
-    if (tx_state() != TX_UNUSED)
+    if (tx_state() != TX_OUTPUTS_RECEIVED)
     {
         return sendError(ERR_TRANSACTION_STATE);
     }
 
-    ux_flow_init(0, ux_generate_random_key_pair_flow, NULL);
+    ux_flow_init(0, ux_tx_finalize_prefix_flow, NULL);
 
     *flags |= IO_ASYNCH_REPLY;
 }

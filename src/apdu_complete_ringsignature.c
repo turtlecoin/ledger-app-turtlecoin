@@ -17,6 +17,7 @@
 #include "apdu_complete_ringsignature.h"
 
 #include <keys.h>
+#include <transaction.h>
 #include <utils.h>
 
 #define APDU_CRS_SIZE KEY_SIZE + sizeof(uint32_t) + KEY_SIZE + KEY_SIZE + SIG_SIZE
@@ -32,18 +33,19 @@ static void do_complete_ring_signature()
     {
         TRY
         {
-            if (hw_complete_ring_signature(
-                    APDU_CRS_SIGNATURE,
-                    APDU_CRS_TX_PUBLIC_KEY,
-                    APDU_CRS_OUTPUT_INDEX,
-                    APDU_CRS_OUTPUT_KEY,
-                    APDU_CRS_K,
-                    N_turtlecoin_wallet->view.private,
-                    N_turtlecoin_wallet->spend.private,
-                    N_turtlecoin_wallet->spend.public)
-                != 0)
+            const uint16_t status = hw_complete_ring_signature(
+                APDU_CRS_SIGNATURE,
+                APDU_CRS_TX_PUBLIC_KEY,
+                APDU_CRS_OUTPUT_INDEX,
+                APDU_CRS_OUTPUT_KEY,
+                APDU_CRS_K,
+                N_turtlecoin_wallet->view.private,
+                N_turtlecoin_wallet->spend.private,
+                N_turtlecoin_wallet->spend.public);
+
+            if (status != OP_OK)
             {
-                THROW(ERR_COMPLETE_RING_SIG);
+                THROW(status);
             }
 
             CLOSE_TRY;
@@ -52,7 +54,7 @@ static void do_complete_ring_signature()
         }
         CATCH_OTHER(e)
         {
-            sendError(ERR_UNKNOWN_ERROR);
+            sendError(e);
         }
         FINALLY
         {
@@ -74,12 +76,11 @@ UX_STEP_SPLASH(
 
 UX_FLOW(ux_display_complete_ringsignature_splash, &ux_display_complete_ringsignature_splash_flow_1_step);
 
-UX_STEP_NOCB(
-    ux_display_complete_ringsignature_flow_1_step,
-    pnn,
-    {&C_icon_turtlecoin, "Complete", "Ring Signature?"});
+UX_STEP_NOCB(ux_display_complete_ringsignature_flow_1_step, pnn, {&C_icon_turtlecoin, "Complete", "Ring Signature?"});
 
-UX_STEP_NOCB(ux_display_complete_ringsignature_flow_2_step, bnnn_paging,
+UX_STEP_NOCB(
+    ux_display_complete_ringsignature_flow_2_step,
+    bnnn_paging,
     {.title = "Output Key", .text = (char *)DISPLAY_KEY_HEX});
 
 UX_STEP_VALID(
@@ -115,7 +116,11 @@ void handle_complete_ring_signature(
 {
     UNUSED(p2);
 
-    if (dataLength != APDU_CRS_SIZE)
+    if (tx_state() != TX_UNUSED)
+    {
+        return sendError(ERR_TRANSACTION_STATE);
+    }
+    else if (dataLength != APDU_CRS_SIZE)
     {
         return sendError(ERR_WRONG_INPUT_LENGTH);
     }
