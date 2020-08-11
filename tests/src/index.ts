@@ -8,6 +8,9 @@ import { TCPTransport } from './TCPTransport';
 import Transport from '@ledgerhq/hw-transport';
 import * as assert from 'assert';
 
+/** @ignore */
+const confirm = !!(process.env.CONFIRM && process.env.CONFIRM.length !== 0);
+
 /**
  * This set of tests is designed to test the application and thus the crypto operations
  * provided by the TurtleCoin application running on a Ledger hardware device against
@@ -94,25 +97,25 @@ describe('Ledger Hardware Tests', function () {
         });
 
         it('Get Public Keys', async () => {
-            const keys = await ledger.getPublicKeys(false);
+            const keys = await ledger.getPublicKeys(confirm);
 
             assert(keys.spend === Wallet.spend.publicKey && keys.view === Wallet.view.publicKey);
         });
 
         it('Get Private Spend Key', async () => {
-            const key = await ledger.getPrivateSpendKey(false);
+            const key = await ledger.getPrivateSpendKey(confirm);
 
             assert(key === Wallet.spend.privateKey);
         });
 
         it('Get Private View Key', async () => {
-            const key = await ledger.getPrivateViewKey(false);
+            const key = await ledger.getPrivateViewKey(confirm);
 
             assert(key === Wallet.view.privateKey);
         });
 
         it('Get Wallet Address', async () => {
-            const address = await ledger.getAddress(false);
+            const address = await ledger.getAddress(confirm);
 
             assert(address === await Wallet.address());
         });
@@ -134,7 +137,7 @@ describe('Ledger Hardware Tests', function () {
         });
 
         it('Reset Keys', async () => {
-            return ledger.resetKeys(false);
+            return ledger.resetKeys(confirm);
         });
     });
 
@@ -146,7 +149,7 @@ describe('Ledger Hardware Tests', function () {
         });
 
         it('Generate Signature', async () => {
-            const signature = await ledger.generateSignature(message_digest, false);
+            const signature = await ledger.generateSignature(message_digest, confirm);
 
             assert(await TurtleCoinCrypto.checkSignature(message_digest, Wallet.spend.publicKey, signature));
         });
@@ -206,63 +209,63 @@ describe('Ledger Hardware Tests', function () {
         });
 
         it('Generate Key Derivation', async () => {
-            const derivation = await ledger.generateKeyDerivation(tx_public_key, false);
+            const derivation = await ledger.generateKeyDerivation(tx_public_key, confirm);
 
             assert(expected_derivation === derivation);
         });
 
         it('Generate Key Derivation: Fails when supplying private key', async () => {
-            await ledger.generateKeyDerivation(expected_privateEphemeral, false)
+            await ledger.generateKeyDerivation(expected_privateEphemeral, confirm)
                 .then(() => assert(false))
                 .catch(() => assert(true));
         });
 
         it('Derive Public Key', async () => {
-            const publicEphemeral = await ledger.derivePublicKey(expected_derivation, output_index, false);
+            const publicEphemeral = await ledger.derivePublicKey(expected_derivation, output_index, confirm);
 
             assert(publicEphemeral === expected_publicEphemeral);
         });
 
         it('Derive Public Key: Fails when wrong output index', async () => {
-            const publicEphemeral = await ledger.derivePublicKey(expected_derivation, output_index + 3, false);
+            const publicEphemeral = await ledger.derivePublicKey(expected_derivation, output_index + 3, confirm);
 
             assert(publicEphemeral !== expected_publicEphemeral);
         });
 
         it('Derive Public Key: Fails when wrong derivation supplied', async () => {
-            const publicEphemeral = await ledger.derivePublicKey(tx_public_key, output_index, false);
+            const publicEphemeral = await ledger.derivePublicKey(tx_public_key, output_index, confirm);
 
             assert(publicEphemeral !== expected_publicEphemeral);
         });
 
         it('Derive Secret Key', async () => {
-            const privateEphemeral = await ledger.deriveSecretKey(expected_derivation, output_index, false);
+            const privateEphemeral = await ledger.deriveSecretKey(expected_derivation, output_index, confirm);
 
             assert(privateEphemeral === expected_privateEphemeral);
         });
 
         it('Derive Secret Key: Fails when wrong output index', async () => {
-            const privateEphemeral = await ledger.deriveSecretKey(expected_derivation, output_index + 3, false);
+            const privateEphemeral = await ledger.deriveSecretKey(expected_derivation, output_index + 3, confirm);
 
             assert(privateEphemeral !== expected_privateEphemeral);
         });
 
         it('Derive Secret Key: Fails when wrong derivation supplied', async () => {
-            const privateEphemeral = await ledger.deriveSecretKey(tx_public_key, output_index, false);
+            const privateEphemeral = await ledger.deriveSecretKey(tx_public_key, output_index, confirm);
 
             assert(privateEphemeral !== expected_privateEphemeral);
         });
 
         it('Generate Key Image', async () => {
             const key_image = await ledger.generateKeyImage(
-                tx_public_key, output_index, expected_publicEphemeral, false);
+                tx_public_key, output_index, expected_publicEphemeral, confirm);
 
             assert(key_image === expected_key_image);
         });
 
         it('Generate Key Image: Fails when wrong output index', async () => {
             await ledger.generateKeyImage(
-                tx_public_key, output_index + 3, expected_publicEphemeral, false)
+                tx_public_key, output_index + 3, expected_publicEphemeral, confirm)
                 .then(() => assert(false))
                 .catch(() => assert(true));
         });
@@ -314,7 +317,7 @@ describe('Ledger Hardware Tests', function () {
                 const signatures = prepared_ring_signatures;
 
                 signatures[real_output_index] = await ledger.completeRingSignature(
-                    tx_public_key, output_index, expected_publicEphemeral, k, signatures[real_output_index], false);
+                    tx_public_key, output_index, expected_publicEphemeral, k, signatures[real_output_index], confirm);
 
                 assert(await TurtleCoinCrypto.checkRingSignature(
                     tx_prefix_hash, expected_key_image, public_keys, signatures));
@@ -322,7 +325,7 @@ describe('Ledger Hardware Tests', function () {
 
             it('Complete Ring Signatures: Fails when wrong output index', async function () {
                 await ledger.completeRingSignature(
-                    tx_public_key, output_index + 3, expected_publicEphemeral, k, prepared_ring_signatures[real_output_index], false)
+                    tx_public_key, output_index + 3, expected_publicEphemeral, k, prepared_ring_signatures[real_output_index], confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
@@ -330,7 +333,7 @@ describe('Ledger Hardware Tests', function () {
             it('Generate Ring Signatures', async function () {
                 const sigs = await ledger.generateRingSignatures(
                     tx_public_key, output_index, expected_publicEphemeral, tx_prefix_hash,
-                    public_keys, real_output_index, false);
+                    public_keys, real_output_index, confirm);
 
                 assert(await TurtleCoinCrypto.checkRingSignatures(
                     tx_prefix_hash, expected_key_image, public_keys, sigs));
@@ -339,7 +342,7 @@ describe('Ledger Hardware Tests', function () {
             it('Generate Ring Signatures: Fails when wrong output index', async function () {
                 await ledger.generateRingSignatures(
                     tx_public_key, output_index + 3, expected_publicEphemeral, tx_prefix_hash,
-                    public_keys, real_output_index, false)
+                    public_keys, real_output_index, confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
@@ -391,7 +394,7 @@ describe('Ledger Hardware Tests', function () {
 
         after('reset tx', async () => {
             if (!skipTests) {
-                await ledger.resetTransaction(false);
+                await ledger.resetTransaction(confirm);
             }
         });
 
@@ -613,7 +616,7 @@ describe('Ledger Hardware Tests', function () {
                     return this.skip();
                 }
 
-                await ledger.signTransaction(false)
+                await ledger.signTransaction(confirm)
                     .then(result => {
                         tx_hash = result.hash;
 
@@ -669,25 +672,25 @@ describe('Ledger Hardware Tests', function () {
             });
 
             it('Get Public Keys', async () => {
-                await ledger.getPublicKeys(false)
+                await ledger.getPublicKeys(confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
 
             it('Get Private Spend Key', async () => {
-                await ledger.getPrivateSpendKey(false)
+                await ledger.getPrivateSpendKey(confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
 
             it('Get Private View Key', async () => {
-                await ledger.getPrivateViewKey(false)
+                await ledger.getPrivateViewKey(confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
 
             it('Get Wallet Address', async () => {
-                await ledger.getAddress(false)
+                await ledger.getAddress(confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
@@ -705,7 +708,7 @@ describe('Ledger Hardware Tests', function () {
             });
 
             it('Reset Keys', async () => {
-                return ledger.resetKeys(false)
+                return ledger.resetKeys(confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
@@ -719,7 +722,7 @@ describe('Ledger Hardware Tests', function () {
             });
 
             it('Generate Signature', async () => {
-                await ledger.generateSignature(message_digest, false)
+                await ledger.generateSignature(message_digest, confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
@@ -763,26 +766,26 @@ describe('Ledger Hardware Tests', function () {
             });
 
             it('Generate Key Derivation', async () => {
-                await ledger.generateKeyDerivation(tx_public_key, false)
+                await ledger.generateKeyDerivation(tx_public_key, confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
 
             it('Derive Public Key', async () => {
-                await ledger.derivePublicKey(expected_derivation, output_index, false)
+                await ledger.derivePublicKey(expected_derivation, output_index, confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
 
             it('Derive Secret Key', async () => {
-                await ledger.deriveSecretKey(expected_derivation, output_index, false)
+                await ledger.deriveSecretKey(expected_derivation, output_index, confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
 
             it('Generate Key Image', async () => {
                 await ledger.generateKeyImage(
-                    tx_public_key, output_index, expected_publicEphemeral, false)
+                    tx_public_key, output_index, expected_publicEphemeral, confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
@@ -832,7 +835,7 @@ describe('Ledger Hardware Tests', function () {
 
                 it('Complete Ring Signatures', async function () {
                     ledger.completeRingSignature(
-                        tx_public_key, output_index, expected_publicEphemeral, k, prepared_ring_signatures[real_output_index], false)
+                        tx_public_key, output_index, expected_publicEphemeral, k, prepared_ring_signatures[real_output_index], confirm)
                         .then(() => assert(false))
                         .catch(() => assert(true));
                 });
