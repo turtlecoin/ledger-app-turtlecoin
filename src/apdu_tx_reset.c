@@ -45,11 +45,11 @@ static void do_tx_reset()
     END_TRY;
 }
 
-UX_STEP_SPLASH(ux_tx_reset_1_step, pnn, do_tx_reset(), {&C_icon_turtlecoin, "Clearing", "Transaction State..."});
+UX_STEP_SPLASH(ux_tx_reset_1_step, pnn, do_tx_reset(), {&C_icon_turtlecoin, "Clearing", "Tx State..."});
 
 UX_FLOW(ux_tx_reset_flow, &ux_tx_reset_1_step);
 
-UX_STEP_NOCB(ux_tx_reset_2_step, pnn, {&C_icon_turtlecoin, "Reset Transaction", "State?"});
+UX_STEP_NOCB(ux_tx_reset_2_step, pnn, {&C_icon_turtlecoin, "Reset Tx", "State?"});
 
 UX_STEP_VALID(ux_tx_reset_3_step, pb, ux_flow_init(0, ux_tx_reset_flow, NULL), {&C_icon_validate_14, "Approve"});
 
