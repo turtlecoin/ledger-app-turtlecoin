@@ -504,6 +504,8 @@ uint16_t tx_load_output(const uint64_t amount, const unsigned char *key)
             // batch write to NVRAM
             TX_WRITE(tx, pos);
 
+            L_transaction.total_output_amount += amount;
+
             L_transaction.received_output_count++;
 
             // if we have now received all of the outputs that we were expecting update the transaction state
