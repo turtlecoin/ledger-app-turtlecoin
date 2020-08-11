@@ -31,8 +31,8 @@
 #define SIG_SET_SIZE SIG_SIZE *RING_PARTICIPANTS
 #define KECCAK_BITS 256
 #define DECIMAL_PLACES 2
-#define TICKER ((unsigned char *)"TRTL")
-#define TICKER_SIZE 4
+#define TICKER ((unsigned char *)" TRTL")
+#define TICKER_SIZE 5
 
 #define P1_CONFIRM 0x01
 #define P1_NON_CONFIRM 0x00

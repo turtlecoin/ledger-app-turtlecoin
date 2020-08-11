@@ -22,7 +22,7 @@
 #define APDU_TSIGN_HASH WORKING_SET
 #define APDU_TSIGN_END_OFFSET APDU_TSIGN_HASH + KEY_SIZE
 #define APDU_TSIGN_AMOUNT APDU_TSIGN_END_OFFSET + sizeof(uint16_t)
-#define APDU_TSIGN_FEE APDU_TSIGN_END_OFFSET + KEY_SIZE // give the amount plenty of room to breath
+#define APDU_TSIGN_FEE APDU_TSIGN_AMOUNT + KEY_SIZE // give the amount plenty of room to breath
 
 #define APDU_TSIGN_RESPONSE APDU_TSIGN_HASH
 #define APDU_TSIGN_RESPONSE_SIZE KEY_SIZE + sizeof(uint16_t)
@@ -97,14 +97,14 @@ void handle_tx_sign(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volati
         unsigned int offset = amountToString(APDU_TSIGN_AMOUNT, tx_input_amount(), KEY_SIZE);
 
         // copy the ticker on to the end of the amount
-        os_memmove(APDU_TSIGN_AMOUNT + offset, TICKER, TICKER_SIZE);
+        os_memmove(APDU_TSIGN_AMOUNT + offset - 1, TICKER, TICKER_SIZE);
     }
 
     {
         unsigned int offset = amountToString(APDU_TSIGN_FEE, tx_fee(), KEY_SIZE);
 
         // copy the ticker on to the end of the amount
-        os_memmove(APDU_TSIGN_FEE + offset, TICKER, TICKER_SIZE);
+        os_memmove(APDU_TSIGN_FEE + offset - 1, TICKER, TICKER_SIZE);
     }
 
     /**
