@@ -27,13 +27,6 @@ void do_address()
     {
         TRY
         {
-            const uint16_t status = generate_public_address(PTR_SPEND_PUBLIC, PTR_VIEW_PUBLIC, APDU_ADDRESS);
-
-            if (status != OP_OK)
-            {
-                THROW(status);
-            }
-
             sendResponse(write_io_hybrid(APDU_ADDRESS, BASE58_ADDRESS_SIZE, APDU_ADDRESS_NAME, false), true);
         }
         CATCH_OTHER(e)
@@ -71,6 +64,13 @@ void handle_address(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volati
     if (tx_state() != TX_UNUSED)
     {
         return sendError(ERR_TRANSACTION_STATE);
+    }
+
+    const uint16_t status = generate_public_address(PTR_SPEND_PUBLIC, PTR_VIEW_PUBLIC, APDU_ADDRESS);
+
+    if (status != OP_OK)
+    {
+        return sendError(status);
     }
 
     /**
