@@ -1708,11 +1708,6 @@ uint16_t hw__generate_ring_signatures(
 {
     unsigned char k[KEY_SIZE] = {0};
 
-    unsigned char x[KEY_SIZE] = {0};
-
-    // copy the private ephemeral
-    os_memmove(x, private_ephemeral, KEY_SIZE);
-
     // prepare the ring signatures
     uint16_t status =
         hw__prepare_ring_signatures(signatures, k, tx_prefix_hash, key_image, public_keys, real_output_index);
@@ -1723,7 +1718,7 @@ uint16_t hw__generate_ring_signatures(
     }
 
     // complete the ring signatures
-    hw__complete_ring_signature(signatures, real_output_index, k, x);
+    hw__complete_ring_signature(signatures, real_output_index, k, private_ephemeral);
 
     return OP_OK;
 }
