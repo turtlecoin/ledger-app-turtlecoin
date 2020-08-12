@@ -38,7 +38,7 @@
 #define P1_NON_CONFIRM 0x00
 #define P1_FIRST 0x00
 #define P1_MORE 0x80
-#define WORKING_SET_SIZE 512 // reserve 512 bytes of working memory for handling APU inputs
+#define WORKING_SET_SIZE 480 // reserve 480 bytes of working memory for handling APU inputs
 
 extern unsigned char G_working_set[WORKING_SET_SIZE];
 

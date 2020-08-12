@@ -23,7 +23,7 @@
 #define TX_MAX_OUTPUTS 90
 #define TX_MAX_SIZE 38400 // bytes
 #define TX_EXTRA_MAX_SIZE 80 // bytes
-#define TX_MAX_DUMP_SIZE 500 // bytes
+#define TX_MAX_DUMP_SIZE 448 // bytes
 
 #define TX_EXTRA_TAG_SIZE 1
 #define TX_EXTRA_PUBKEY_TAG 0x01
