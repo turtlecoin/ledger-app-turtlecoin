@@ -1256,12 +1256,11 @@ uint16_t hw_generate_ring_signatures(
      * We have to use a local buffer here to avoid running into issues in using
      * the shared working space that hw__generate_ring_signatures() will use
      */
-    unsigned char buffer[KEY_SIZE * 3] = {0};
+    unsigned char buffer[KEY_SIZE * 2] = {0};
 
 #define LOCAL_BUFFER ((unsigned char *)buffer)
 #define DERIVATION LOCAL_BUFFER
-#define PUBLIC_EPHEMERAL DERIVATION + KEY_SIZE
-#define PRIVATE_EPHEMERAL PUBLIC_EPHEMERAL + KEY_SIZE
+#define EPHEMERAL DERIVATION + KEY_SIZE
 
     BEGIN_TRY
     {
@@ -1276,7 +1275,7 @@ uint16_t hw_generate_ring_signatures(
             }
 
             // Generate the public ephemeral for the given output P = H(D || n)G + B
-            status = hw_derive_public_key(PUBLIC_EPHEMERAL, DERIVATION, output_index, publicSpend);
+            status = hw_derive_public_key(EPHEMERAL, DERIVATION, output_index, publicSpend);
 
             if (status != OP_OK)
             {
@@ -1288,7 +1287,7 @@ uint16_t hw_generate_ring_signatures(
              * processing is for an output that was actually sent to us, otherwise, we
              * will fail
              */
-            status = os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE);
+            status = os_memcmp(EPHEMERAL, output_key, KEY_SIZE);
 
             if (status != OP_OK)
             {
@@ -1296,7 +1295,7 @@ uint16_t hw_generate_ring_signatures(
             }
 
             // Generate the private ephemeral for the given output x = H(D || N) + b
-            status = hw_derive_secret_key(PRIVATE_EPHEMERAL, DERIVATION, output_index, privateSpend);
+            status = hw_derive_secret_key(EPHEMERAL, DERIVATION, output_index, privateSpend);
 
             if (status != OP_OK)
             {
@@ -1305,7 +1304,7 @@ uint16_t hw_generate_ring_signatures(
 
             // generate the key image and store it in the derivation to reduce memory
             // use
-            status = hw__generate_key_image(DERIVATION, PUBLIC_EPHEMERAL, PRIVATE_EPHEMERAL);
+            status = hw__generate_key_image(DERIVATION, output_key, EPHEMERAL);
 
             if (status != OP_OK)
             {
@@ -1314,7 +1313,7 @@ uint16_t hw_generate_ring_signatures(
 
             // generate the ring signatures
             status = hw__generate_ring_signatures(
-                signatures, tx_prefix_hash, DERIVATION, public_keys, PRIVATE_EPHEMERAL, real_output_index);
+                signatures, tx_prefix_hash, DERIVATION, public_keys, EPHEMERAL, real_output_index);
 
             if (status != OP_OK)
             {
