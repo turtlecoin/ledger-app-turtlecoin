@@ -76,16 +76,16 @@ describe('Ledger Hardware Tests', function () {
         it('Generate Random Key Pair', async () => {
             const keys = await ledger.getRandomKeyPair();
 
-            assert(await TurtleCoinCrypto.checkKey(keys.public) &&
-                await TurtleCoinCrypto.checkScalar(keys.private));
+            assert(await TurtleCoinCrypto.checkKey(keys.publicKey) &&
+                await TurtleCoinCrypto.checkScalar(keys.privateKey));
         });
 
         it('Private Key to Public Key', async () => {
             const keys = await TurtleCoinCrypto.generateKeys();
 
-            const pub = await ledger.privateToPublic(keys.privateKey);
+            const result = await ledger.privateToPublic(keys.privateKey);
 
-            assert(pub === keys.publicKey);
+            assert(result.publicKey === keys.publicKey);
         });
 
         it('Private Key to Public Key: Supplying public key fails', async () => {
@@ -99,25 +99,25 @@ describe('Ledger Hardware Tests', function () {
         it('Get Public Keys', async () => {
             const keys = await ledger.getPublicKeys(confirm);
 
-            assert(keys.spend === Wallet.spend.publicKey && keys.view === Wallet.view.publicKey);
+            assert(keys.spend.publicKey === Wallet.spend.publicKey && keys.view.publicKey === Wallet.view.publicKey);
         });
 
         it('Get Private Spend Key', async () => {
             const key = await ledger.getPrivateSpendKey(confirm);
 
-            assert(key === Wallet.spend.privateKey);
+            assert(key.privateKey === Wallet.spend.privateKey);
         });
 
         it('Get Private View Key', async () => {
             const key = await ledger.getPrivateViewKey(confirm);
 
-            assert(key === Wallet.view.privateKey);
+            assert(key.privateKey === Wallet.view.privateKey);
         });
 
         it('Get Wallet Address', async () => {
-            const address = await ledger.getAddress(confirm);
+            const result = await ledger.getAddress(confirm);
 
-            assert(address === await Wallet.address());
+            assert(await result.address() === await Wallet.address());
         });
 
         it('Check Key', async () => {
@@ -221,39 +221,39 @@ describe('Ledger Hardware Tests', function () {
         });
 
         it('Derive Public Key', async () => {
-            const publicEphemeral = await ledger.derivePublicKey(expected_derivation, output_index, confirm);
+            const result = await ledger.derivePublicKey(expected_derivation, output_index, confirm);
 
-            assert(publicEphemeral === expected_publicEphemeral);
+            assert(result.publicKey === expected_publicEphemeral);
         });
 
         it('Derive Public Key: Fails when wrong output index', async () => {
-            const publicEphemeral = await ledger.derivePublicKey(expected_derivation, output_index + 3, confirm);
+            const result = await ledger.derivePublicKey(expected_derivation, output_index + 3, confirm);
 
-            assert(publicEphemeral !== expected_publicEphemeral);
+            assert(result.publicKey !== expected_publicEphemeral);
         });
 
         it('Derive Public Key: Fails when wrong derivation supplied', async () => {
-            const publicEphemeral = await ledger.derivePublicKey(tx_public_key, output_index, confirm);
+            const result = await ledger.derivePublicKey(tx_public_key, output_index, confirm);
 
-            assert(publicEphemeral !== expected_publicEphemeral);
+            assert(result.publicKey !== expected_publicEphemeral);
         });
 
         it('Derive Secret Key', async () => {
-            const privateEphemeral = await ledger.deriveSecretKey(expected_derivation, output_index, confirm);
+            const result = await ledger.deriveSecretKey(expected_derivation, output_index, confirm);
 
-            assert(privateEphemeral === expected_privateEphemeral);
+            assert(result.privateKey === expected_privateEphemeral);
         });
 
         it('Derive Secret Key: Fails when wrong output index', async () => {
-            const privateEphemeral = await ledger.deriveSecretKey(expected_derivation, output_index + 3, confirm);
+            const result = await ledger.deriveSecretKey(expected_derivation, output_index + 3, confirm);
 
-            assert(privateEphemeral !== expected_privateEphemeral);
+            assert(result.privateKey !== expected_privateEphemeral);
         });
 
         it('Derive Secret Key: Fails when wrong derivation supplied', async () => {
-            const privateEphemeral = await ledger.deriveSecretKey(tx_public_key, output_index, confirm);
+            const result = await ledger.deriveSecretKey(tx_public_key, output_index, confirm);
 
-            assert(privateEphemeral !== expected_privateEphemeral);
+            assert(result.privateKey !== expected_privateEphemeral);
         });
 
         it('Generate Key Image', async () => {
@@ -862,8 +862,8 @@ describe('Ledger Hardware Tests', function () {
         it('Generate Random Key Pair', async () => {
             const keys = await ledger.getRandomKeyPair();
 
-            assert(await TurtleCoinCrypto.checkKey(keys.public) &&
-                await TurtleCoinCrypto.checkScalar(keys.private));
+            assert(await TurtleCoinCrypto.checkKey(keys.publicKey) &&
+                await TurtleCoinCrypto.checkScalar(keys.privateKey));
         });
     });
 });
