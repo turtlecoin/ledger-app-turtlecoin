@@ -125,6 +125,16 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx)
                         tx);
                     break;
 
+                case APDU_GENERATE_KEYIMAGE_PRIMITIVE:
+                    handle_generate_keyimage_primitive(
+                        G_io_apdu_buffer[OFFSET_P1],
+                        G_io_apdu_buffer[OFFSET_P2],
+                        G_io_apdu_buffer + OFFSET_CDATA,
+                        data_length,
+                        flags,
+                        tx);
+                    break;
+
                 case APDU_GENERATE_RING_SIGNATURES:
                     handle_generate_ring_signatures(
                         G_io_apdu_buffer[OFFSET_P1],

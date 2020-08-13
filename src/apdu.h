@@ -28,6 +28,7 @@
 #include <apdu_derive_secret_key.h>
 #include <apdu_generate_key_derivation.h>
 #include <apdu_generate_keyimage.h>
+#include <apdu_generate_keyimage_primitive.h>
 #include <apdu_generate_ringsignatures.h>
 #include <apdu_generate_signature.h>
 #include <apdu_ident.h>
@@ -116,6 +117,16 @@
  * @returns key_image {32 bytes}
  */
 #define APDU_GENERATE_KEYIMAGE 0x40
+
+/**
+ * Input payload of 68 bytes
+ *
+ * @param derivation {32 bytes}
+ * @param output_index {4 bytes}
+ * @param output_key {32 bytes}
+ * @returns key_image {32 bytes}
+ */
+#define APDU_GENERATE_KEYIMAGE_PRIMITIVE 0x41
 
 /**
  * Input payload of 232 bytes

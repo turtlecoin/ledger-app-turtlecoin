@@ -72,6 +72,14 @@ uint16_t hw_generate_key_image(
     const unsigned char *privateSpend,
     const unsigned char *publicSpend);
 
+uint16_t hw_generate_key_image_primitive(
+    unsigned char *key_image,
+    const unsigned char *derivation,
+    const size_t output_index,
+    const unsigned char *output_key,
+    const unsigned char *privateSpend,
+    const unsigned char *publicSpend);
+
 uint16_t hw_generate_keypair(unsigned char *public, unsigned char *private);
 
 uint16_t hw_generate_private_view_key(unsigned char *privateView, const unsigned char *privateSpend);

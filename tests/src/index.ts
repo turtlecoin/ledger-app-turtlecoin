@@ -58,7 +58,7 @@ describe('Ledger Hardware Tests', function () {
 
     describe('General Functions', () => {
         it('Version', async () => {
-            return ledger.getVersion();
+            await ledger.getVersion();
         });
 
         it('Ident', async () => {
@@ -266,6 +266,24 @@ describe('Ledger Hardware Tests', function () {
         it('Generate Key Image: Fails when wrong output index', async () => {
             await ledger.generateKeyImage(
                 tx_public_key, output_index + 3, expected_publicEphemeral, confirm)
+                .then(() => assert(false))
+                .catch(() => assert(true));
+        });
+
+        it('Generate Key Image Primitive', async () => {
+            const derivation = await TurtleCoinCrypto.generateKeyDerivation(tx_public_key, Wallet.view.privateKey);
+
+            const key_image = await ledger.generateKeyImagePrimitive(
+                derivation, output_index, expected_publicEphemeral, confirm);
+
+            assert(key_image === expected_key_image);
+        });
+
+        it('Generate Key Image Primitive: Fails when wrong output index', async () => {
+            const derivation = await TurtleCoinCrypto.generateKeyDerivation(tx_public_key, Wallet.view.privateKey);
+
+            await ledger.generateKeyImagePrimitive(
+                derivation, output_index + 3, expected_publicEphemeral, confirm)
                 .then(() => assert(false))
                 .catch(() => assert(true));
         });
@@ -786,6 +804,15 @@ describe('Ledger Hardware Tests', function () {
             it('Generate Key Image', async () => {
                 await ledger.generateKeyImage(
                     tx_public_key, output_index, expected_publicEphemeral, confirm)
+                    .then(() => assert(false))
+                    .catch(() => assert(true));
+            });
+
+            it('Generate Key Image Primitive', async () => {
+                const derivation = await TurtleCoinCrypto.generateKeyDerivation(tx_public_key, Wallet.view.privateKey);
+
+                await ledger.generateKeyImagePrimitive(
+                    derivation, output_index, expected_publicEphemeral, confirm)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });

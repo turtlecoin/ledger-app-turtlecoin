@@ -1409,7 +1409,7 @@ uint16_t hw_generate_key_image(
 
             if (status != OP_OK)
             {
-                THROW(status);
+                THROW(ERR_PUBKEY_MISMATCH);
             }
 
             // Generate the private ephemeral for the given output x = H(D || N) + b
@@ -1436,6 +1436,68 @@ uint16_t hw_generate_key_image(
 #undef PRIVATE_EPHEMERAL
 #undef PUBLIC_EPHEMERAL
 #undef DERIVATION
+        }
+    }
+    END_TRY;
+}
+
+uint16_t hw_generate_key_image_primitive(
+    unsigned char *key_image,
+    const unsigned char *derivation,
+    const size_t output_index,
+    const unsigned char *output_key,
+    const unsigned char *privateSpend,
+    const unsigned char *publicSpend)
+{
+    BEGIN_TRY
+    {
+#define PUBLIC_EPHEMERAL BUFFER
+#define PRIVATE_EPHEMERAL PUBLIC_EPHEMERAL + KEY_SIZE
+        TRY
+        {
+            // Generate the public ephemeral for the given output P = H(D || n)G + B
+            uint16_t status = hw_derive_public_key(PUBLIC_EPHEMERAL, derivation, output_index, publicSpend);
+
+            if (status != OP_OK)
+            {
+                THROW(status);
+            }
+
+            /**
+             * This checks to verify that the key generation request that we are
+             * processing is for an output that was actually sent to us, otherwise, we
+             * will fail
+             */
+            status = os_memcmp(PUBLIC_EPHEMERAL, output_key, KEY_SIZE);
+
+            if (status != OP_OK)
+            {
+                THROW(ERR_PUBKEY_MISMATCH);
+            }
+
+            // Generate the private ephemeral for the given output x = H(D || N) + b
+            status = hw_derive_secret_key(PRIVATE_EPHEMERAL, derivation, output_index, privateSpend);
+
+            if (status != OP_OK)
+            {
+                THROW(status);
+            }
+
+            CLOSE_TRY;
+
+            // Generate the key image I = Hp(P)x
+            return hw__generate_key_image(key_image, PUBLIC_EPHEMERAL, PRIVATE_EPHEMERAL);
+        }
+        CATCH_OTHER(e)
+        {
+            return e;
+        }
+        FINALLY
+        {
+            // wipe the buffer as we don't want that leaking
+            explicit_bzero(BUFFER, BUFFER_SIZE);
+#undef PRIVATE_EPHEMERAL
+#undef PUBLIC_EPHEMERAL
         }
     }
     END_TRY;
