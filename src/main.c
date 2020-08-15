@@ -77,6 +77,10 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx)
                     handle_spend_secret_key(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], flags, tx);
                     break;
 
+                case APDU_VIEW_WALLET_KEYS:
+                    handle_view_wallet_keys(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], flags, tx);
+                    break;
+
                 case APDU_PRIVATE_TO_PUBLIC:
                     handle_private_to_public(
                         G_io_apdu_buffer[OFFSET_P1],

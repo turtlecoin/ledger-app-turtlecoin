@@ -49,6 +49,7 @@
 #include <apdu_tx_state.h>
 #include <apdu_version.h>
 #include <apdu_view_secret_key.h>
+#include <apdu_view_wallet_keys.h>
 
 /**
  * @returns major || minor || patch {3 bytes}
@@ -79,6 +80,11 @@
  * @returns spend_secret_key {32 bytes}
  */
 #define APDU_SPEND_SECRET_KEY 0x12
+
+/**
+ * @returns spend_public_key || view_private_key {64 bytes}
+ */
+#define APDU_VIEW_WALLET_KEYS 0x13
 
 /**
  * @param public_key {32 bytes}
