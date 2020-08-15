@@ -83,15 +83,15 @@ describe('Ledger Hardware Tests', function () {
         it('Private Key to Public Key', async () => {
             const keys = await TurtleCoinCrypto.generateKeys();
 
-            const result = await ledger.privateToPublic(keys.privateKey);
+            const result = await ledger.privateToPublic(keys.private_key);
 
-            assert(result.publicKey === keys.publicKey);
+            assert(result.publicKey === keys.public_key);
         });
 
         it('Private Key to Public Key: Supplying public key fails', async () => {
             const keys = await TurtleCoinCrypto.generateKeys();
 
-            await ledger.privateToPublic(keys.publicKey)
+            await ledger.privateToPublic(keys.public_key)
                 .then(() => assert(false))
                 .catch(() => assert(true));
         });
@@ -100,6 +100,12 @@ describe('Ledger Hardware Tests', function () {
             const keys = await ledger.getPublicKeys(confirm);
 
             assert(keys.spend.publicKey === Wallet.spend.publicKey && keys.view.publicKey === Wallet.view.publicKey);
+        });
+
+        it('Get View Wallet Keys', async () => {
+            const wallet = await ledger.getViewWallet(confirm);
+
+            assert(wallet.spend.publicKey === Wallet.spend.publicKey && wallet.view.publicKey === Wallet.view.publicKey);
         });
 
         it('Get Private Spend Key', async () => {
@@ -191,7 +197,7 @@ describe('Ledger Hardware Tests', function () {
         let expected_key_image: string;
 
         before(async () => {
-            tx_public_key = (await TurtleCoinCrypto.generateKeys()).publicKey;
+            tx_public_key = (await TurtleCoinCrypto.generateKeys()).public_key;
 
             expected_derivation = await TurtleCoinCrypto.generateKeyDerivation(
                 tx_public_key, Wallet.view.privateKey);
@@ -317,7 +323,7 @@ describe('Ledger Hardware Tests', function () {
                 tx_prefix_hash = await TurtleCoinCrypto.cn_fast_hash(ledgerIdent);
 
                 for (let i = 0; i < 3; i++) {
-                    public_keys.push((await TurtleCoinCrypto.generateKeys()).publicKey);
+                    public_keys.push((await TurtleCoinCrypto.generateKeys()).public_key);
                 }
 
                 const prepped = await TurtleCoinCrypto.prepareRingSignatures(
@@ -325,7 +331,7 @@ describe('Ledger Hardware Tests', function () {
 
                 prepared_ring_signatures = prepped.signatures;
 
-                k = prepped.key;
+                k = prepped.k;
 
                 expected_ring_signatures = await TurtleCoinCrypto.generateRingSignatures(
                     tx_prefix_hash, expected_key_image, public_keys, expected_privateEphemeral, real_output_index);
@@ -337,7 +343,7 @@ describe('Ledger Hardware Tests', function () {
                 signatures[real_output_index] = await ledger.completeRingSignature(
                     tx_public_key, output_index, expected_publicEphemeral, k, signatures[real_output_index], confirm);
 
-                assert(await TurtleCoinCrypto.checkRingSignature(
+                assert(await TurtleCoinCrypto.checkRingSignatures(
                     tx_prefix_hash, expected_key_image, public_keys, signatures));
             });
 
@@ -393,11 +399,11 @@ describe('Ledger Hardware Tests', function () {
                 if (state === 0) {
                     const keys = await TurtleCoinCrypto.generateKeys();
 
-                    tx_public_key = keys.publicKey;
+                    tx_public_key = keys.public_key;
 
                     const output_keys = await TurtleCoinCrypto.generateKeys();
 
-                    payment_id = output_keys.privateKey;
+                    payment_id = output_keys.private_key;
 
                     await ledger.startTransaction(3000000, 2, 1, tx_public_key, payment_id);
                 } else {
@@ -437,7 +443,7 @@ describe('Ledger Hardware Tests', function () {
                  */
                 const keys = await TurtleCoinCrypto.generateKeys();
 
-                input_tx_public_key = keys.publicKey;
+                input_tx_public_key = keys.public_key;
 
                 const derivation = await TurtleCoinCrypto.generateKeyDerivation(
                     input_tx_public_key, Wallet.view.privateKey);
@@ -450,12 +456,12 @@ describe('Ledger Hardware Tests', function () {
                 for (let i = 0; i < 3; i++) {
                     const mixin = await TurtleCoinCrypto.generateKeys();
 
-                    mixins.push(mixin.publicKey);
+                    mixins.push(mixin.public_key);
                 }
 
                 const output = await TurtleCoinCrypto.generateKeys();
 
-                output_key = output.publicKey;
+                output_key = output.public_key;
             });
 
             it('Check state: Ready', async () => {
@@ -684,7 +690,7 @@ describe('Ledger Hardware Tests', function () {
             it('Private Key to Public Key', async () => {
                 const keys = await TurtleCoinCrypto.generateKeys();
 
-                await ledger.privateToPublic(keys.privateKey)
+                await ledger.privateToPublic(keys.private_key)
                     .then(() => assert(false))
                     .catch(() => assert(true));
             });
@@ -766,7 +772,7 @@ describe('Ledger Hardware Tests', function () {
             let expected_key_image: string;
 
             before(async () => {
-                tx_public_key = (await TurtleCoinCrypto.generateKeys()).publicKey;
+                tx_public_key = (await TurtleCoinCrypto.generateKeys()).public_key;
 
                 expected_derivation = await TurtleCoinCrypto.generateKeyDerivation(
                     tx_public_key, Wallet.view.privateKey);
@@ -846,7 +852,7 @@ describe('Ledger Hardware Tests', function () {
                     tx_prefix_hash = await TurtleCoinCrypto.cn_fast_hash(ledgerIdent);
 
                     for (let i = 0; i < 3; i++) {
-                        public_keys.push((await TurtleCoinCrypto.generateKeys()).publicKey);
+                        public_keys.push((await TurtleCoinCrypto.generateKeys()).public_key);
                     }
 
                     const prepped = await TurtleCoinCrypto.prepareRingSignatures(
@@ -854,7 +860,7 @@ describe('Ledger Hardware Tests', function () {
 
                     prepared_ring_signatures = prepped.signatures;
 
-                    k = prepped.key;
+                    k = prepped.k;
 
                     expected_ring_signatures = await TurtleCoinCrypto.generateRingSignatures(
                         tx_prefix_hash, expected_key_image, public_keys, expected_privateEphemeral, real_output_index);
