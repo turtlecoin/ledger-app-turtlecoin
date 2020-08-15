@@ -49,14 +49,6 @@ UX_STEP_SPLASH(ux_tx_reset_1_step, pnn, do_tx_reset(), {&C_icon_turtlecoin, "Cle
 
 UX_FLOW(ux_tx_reset_flow, &ux_tx_reset_1_step);
 
-UX_STEP_NOCB(ux_tx_reset_2_step, pnn, {&C_icon_turtlecoin, "Reset Tx", "State?"});
-
-UX_STEP_VALID(ux_tx_reset_3_step, pb, ux_flow_init(0, ux_tx_reset_flow, NULL), {&C_icon_validate_14, "Approve"});
-
-UX_STEP_VALID(ux_tx_reset_4_step, pb, do_deny(), {&C_icon_crossmark, "Reject"});
-
-UX_FLOW(ux_tx_reset_confirm_flow, &ux_tx_reset_2_step, &ux_tx_reset_3_step, &ux_tx_reset_4_step);
-
 void handle_tx_reset(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {
     UNUSED(p2);
@@ -67,26 +59,7 @@ void handle_tx_reset(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volat
         return sendResponse(0, true);
     }
 
-    /**
-     * If the APDU was sent requesting confirmation then
-     * we need to start the UX flow and set the flags
-     * to let the i/o handler know that the request is
-     * async and will be completed shortly
-     */
-    if (p1 == P1_CONFIRM)
-    {
-        ux_flow_init(0, ux_tx_reset_confirm_flow, NULL);
+    ux_flow_init(0, ux_tx_reset_flow, NULL);
 
-        *flags |= IO_ASYNCH_REPLY;
-    }
-    else if (p1 == P1_NON_CONFIRM && DEBUG_BUILD == 1)
-    {
-        ux_flow_init(0, ux_tx_reset_flow, NULL);
-
-        *flags |= IO_ASYNCH_REPLY;
-    }
-    else
-    {
-        sendError(ERR_OP_USER_REQUIRED);
-    }
+    *flags |= IO_ASYNCH_REPLY;
 }
