@@ -3,7 +3,7 @@
 // Please see the included LICENSE file for more information.
 
 import Transport, { Observer, Subscription } from '@ledgerhq/hw-transport';
-import { Reader, Writer } from 'bytestream-helper';
+import { Reader, Writer } from '@turtlecoin/bytestream';
 import { Socket, createConnection } from 'net';
 import { AbortController } from 'abort-controller/dist/abort-controller';
 
