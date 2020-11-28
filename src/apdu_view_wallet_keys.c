@@ -47,21 +47,27 @@ static void do_view_wallet_keys()
 
 UX_STEP_NOCB(ux_display_wallet_keys_flow_1_step, pnn, {&C_icon_turtlecoin, "Export View", "Wallet Keys?"});
 
-UX_STEP_NOCB(ux_display_wallet_keys_flow_2_step, bnnn_paging, {.title = "Public Spend", .text = (char *)APDU_WK_SPEND_PUBLIC});
+UX_STEP_NOCB(
+    ux_display_wallet_keys_flow_2_step,
+    bnnn_paging,
+    {.title = "Public Spend", .text = (char *)APDU_WK_SPEND_PUBLIC});
 
-UX_STEP_NOCB(ux_display_wallet_keys_flow_3_step, bnnn_paging, {.title = "Private View", .text = (char *)APDU_WK_VIEW_PRIVATE});
+UX_STEP_NOCB(
+    ux_display_wallet_keys_flow_3_step,
+    bnnn_paging,
+    {.title = "Private View", .text = (char *)APDU_WK_VIEW_PRIVATE});
 
 UX_STEP_VALID(ux_display_wallet_keys_flow_4_step, pb, do_view_wallet_keys(), {&C_icon_validate_14, "Approve"});
 
 UX_STEP_VALID(ux_display_wallet_keys_flow_5_step, pb, do_deny(), {&C_icon_crossmark, "Reject"});
 
 UX_FLOW(
-        ux_display_wallet_keys_flow,
-&ux_display_wallet_keys_flow_1_step,
-&ux_display_wallet_keys_flow_2_step,
-&ux_display_wallet_keys_flow_3_step,
-&ux_display_wallet_keys_flow_4_step,
-&ux_display_wallet_keys_flow_5_step);
+    ux_display_wallet_keys_flow,
+    &ux_display_wallet_keys_flow_1_step,
+    &ux_display_wallet_keys_flow_2_step,
+    &ux_display_wallet_keys_flow_3_step,
+    &ux_display_wallet_keys_flow_4_step,
+    &ux_display_wallet_keys_flow_5_step);
 
 void handle_view_wallet_keys(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx)
 {

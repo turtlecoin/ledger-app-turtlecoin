@@ -23,4 +23,4 @@
 
 void handle_view_wallet_keys(uint8_t p1, uint8_t p2, volatile unsigned int *flags, volatile unsigned int *tx);
 
-#endif //APDU_WALLET_KEYS_H
+#endif // APDU_WALLET_KEYS_H

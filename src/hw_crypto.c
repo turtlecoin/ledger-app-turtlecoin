@@ -546,7 +546,7 @@ static void hw_ge_fromfe_frombytes_vartime(unsigned char *ge, const unsigned cha
 
     goto setsign;
 
-    // clang-format off
+// clang-format off
     negative:
     {
         cx_math_multm(x, x, (unsigned char *)C_fe_sqrtm1, MOD);
