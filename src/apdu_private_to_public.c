@@ -54,7 +54,7 @@ static void do_private_to_public()
     END_TRY;
 }
 
-UX_STEP_SPLASH(ux_private_to_public_1_step, pnn, do_private_to_public(), {&C_icon_turtlecoin, "Checking", "Signature"});
+UX_STEP_SPLASH(ux_private_to_public_1_step, pnn, do_private_to_public(), {&C_icon_turtlecoin, "Generating", "Public Key..."});
 
 UX_FLOW(ux_private_to_public_flow, &ux_private_to_public_1_step);
 
