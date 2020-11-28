@@ -56,13 +56,19 @@ UX_FLOW(ux_idle_addr_flow, &ux_idle_addr_flow_1_step);
 
 UX_STEP_NOCB(ux_idle_flow_1_step, pnn, {&C_icon_turtlecoin, "TurtleCoin", "  is Ready"});
 
-UX_STEP_NOCB(ux_idle_flow_2_step, bn, {"Version", APPVERSION});
+UX_STEP_VALID(ux_idle_flow_2_step, pb, ui_display_address(), {&C_icon_turtlecoin, "Show Wallet", "Address"});
 
-UX_STEP_VALID(ux_idle_flow_4_step, pb, ui_display_address(), {&C_icon_turtlecoin, "Show Wallet", "Address"});
+UX_STEP_NOCB(ux_idle_flow_3_step, bn, {"Version", APPVERSION});
 
-UX_STEP_VALID(ux_idle_flow_3_step, pb, os_sched_exit(-1), {&C_icon_dashboard_x, "Quit"});
+UX_STEP_VALID(ux_idle_flow_4_step, pb, os_sched_exit(-1), {&C_icon_dashboard_x, "Quit"});
 
-UX_FLOW(ux_idle_flow, &ux_idle_flow_1_step, &ux_idle_flow_2_step, &ux_idle_flow_3_step, FLOW_LOOP);
+UX_FLOW(
+    ux_idle_flow,
+    &ux_idle_flow_1_step,
+    &ux_idle_flow_2_step,
+    &ux_idle_flow_3_step,
+    &ux_idle_flow_4_step,
+    FLOW_LOOP);
 
 UX_STEP_SPLASH(ux_boot_splash_step_1, pnn, init_boot(), {&C_icon_turtlecoin, "Safe, Fun &", "  Easy...  "});
 
