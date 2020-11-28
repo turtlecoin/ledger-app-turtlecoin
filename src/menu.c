@@ -20,6 +20,8 @@
 
 #include <transaction.h>
 
+#define DISPLAY_ADDRESS WORKING_SET
+
 static void app_kill(void)
 {
     BEGIN_TRY_L(exit)
@@ -48,9 +50,15 @@ static void init_boot()
     ui_idle();
 }
 
+UX_STEP_VALID(ux_idle_addr_flow_1_step, bnnn_paging, ui_idle(), {.title = "Address", .text = (char *)DISPLAY_ADDRESS});
+
+UX_FLOW(ux_idle_addr_flow, &ux_idle_addr_flow_1_step);
+
 UX_STEP_NOCB(ux_idle_flow_1_step, pnn, {&C_icon_turtlecoin, "TurtleCoin", "  is Ready"});
 
 UX_STEP_NOCB(ux_idle_flow_2_step, bn, {"Version", APPVERSION});
+
+UX_STEP_VALID(ux_idle_flow_4_step, pb, ui_display_address(), {&C_icon_turtlecoin, "Show Wallet", "Address"});
 
 UX_STEP_VALID(ux_idle_flow_3_step, pb, os_sched_exit(-1), {&C_icon_dashboard_x, "Quit"});
 
@@ -79,4 +87,21 @@ void ui_splash()
     }
 
     ux_flow_init(0, ux_boot_splash_flow, NULL);
+}
+
+void ui_display_address()
+{
+    if (tx_state() != TX_UNUSED)
+    {
+        return;
+    }
+
+    const uint16_t status = generate_public_address(PTR_SPEND_PUBLIC, PTR_VIEW_PUBLIC, DISPLAY_ADDRESS);
+
+    if (G_ux.stack_count == 0)
+    {
+        ux_stack_push();
+    }
+
+    ux_flow_init(0, ux_idle_addr_flow, NULL);
 }

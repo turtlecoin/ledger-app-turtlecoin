@@ -26,4 +26,6 @@ void ui_idle();
 
 void ui_splash();
 
+void ui_display_address();
+
 #endif
