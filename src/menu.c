@@ -50,13 +50,15 @@ static void init_boot()
     ui_idle();
 }
 
-UX_STEP_VALID(ux_idle_addr_flow_1_step, bnnn_paging, ui_idle(), {.title = "Address", .text = (char *)DISPLAY_ADDRESS});
+UX_STEP_NOCB(ux_idle_addr_flow_1_step, bnnn_paging, {.title = "Address", .text = (char *)DISPLAY_ADDRESS});
 
-UX_FLOW(ux_idle_addr_flow, &ux_idle_addr_flow_1_step);
+UX_STEP_VALID(ux_idle_addr_flow_2_step, pb, ui_idle(), {&C_icon_validate_14, "Back to", "Main Menu"});
+
+UX_FLOW(ux_idle_addr_flow, &ux_idle_addr_flow_1_step, &ux_idle_addr_flow_2_step);
 
 UX_STEP_NOCB(ux_idle_flow_1_step, pnn, {&C_icon_turtlecoin, "TurtleCoin", "  is Ready"});
 
-UX_STEP_VALID(ux_idle_flow_2_step, pb, ui_display_address(), {&C_icon_turtlecoin, "Show Wallet", "Address"});
+UX_STEP_VALID(ux_idle_flow_2_step, pb, ui_display_address(), {&C_icon_turtlecoin, "Display", "Wallet Address"});
 
 UX_STEP_NOCB(ux_idle_flow_3_step, bn, {"Version", APPVERSION});
 
